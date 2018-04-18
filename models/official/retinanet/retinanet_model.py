@@ -31,6 +31,7 @@ import tensorflow as tf
 import anchors
 import coco_metric
 import retinanet_architecture
+from tensorflow import estimator
 from tensorflow.contrib.tpu.python.tpu import bfloat16
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_optimizer
@@ -251,8 +252,8 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
   if mode == tf.estimator.ModeKeys.TRAIN:
     optimizer = tf.train.MomentumOptimizer(
         learning_rate, momentum=params['momentum'])
-    if params['use_tpu']:
-      optimizer = tpu_optimizer.CrossShardOptimizer(optimizer)
+    # if params['use_tpu']:
+    #   optimizer = tpu_optimizer.CrossShardOptimizer(optimizer)
 
     # Batch norm requires update_ops to be added as a train_op dependency.
     update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
@@ -319,12 +320,19 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
       metric_fn_inputs['box_outputs_%d' % level] = box_outputs[level]
     eval_metrics = (metric_fn, metric_fn_inputs)
 
-  return tpu_estimator.TPUEstimatorSpec(
-      mode=mode,
-      loss=total_loss,
-      train_op=train_op,
-      eval_metrics=eval_metrics,
-      scaffold_fn=scaffold_fn)
+  # return tpu_estimator.TPUEstimatorSpec(
+  #     mode=mode,
+  #     loss=total_loss,
+  #     train_op=train_op,
+  #     eval_metrics=eval_metrics,
+  #     scaffold_fn=scaffold_fn)
+  return estimator.EstimatorSpec(
+    mode=mode,
+    loss=total_loss,
+    train_op=train_op,
+    eval_metrics=eval_metrics,
+    scaffold=scaffold_fn
+  )
 
 
 def retinanet_model_fn(features, labels, mode, params):
