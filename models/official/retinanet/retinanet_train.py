@@ -25,7 +25,7 @@ from absl import flags
 import tensorflow as tf
 
 import dataloader
-import retinanet_model
+# import retinanet_model
 from tensorflow import estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_config
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
@@ -120,7 +120,7 @@ def main(argv):
   #           project=FLAGS.gcp_project))
   #   tpu_grpc_url = tpu_cluster_resolver.get_master()
   # tf.Session.reset(tpu_grpc_url)
-
+  print(FLAGS.mode)
   if FLAGS.mode is 'train' and FLAGS.training_file_pattern is None:
     raise RuntimeError('You must specify --training_file_pattern for training.')
   if FLAGS.mode is 'eval':
@@ -130,138 +130,138 @@ def main(argv):
       raise RuntimeError('You must specify --val_json_file for evaluation.')
 
   # Parse hparams
-  hparams = retinanet_model.default_hparams()
-  hparams.parse(FLAGS.hparams)
-
-  params = dict(
-      hparams.values(),
-      # num_shards=FLAGS.num_shards,
-      # use_tpu=FLAGS.use_tpu,
-      resnet_checkpoint=FLAGS.resnet_checkpoint,
-      val_json_file=FLAGS.val_json_file,
-      mode=FLAGS.mode,
-  )
-  config_proto = tf.ConfigProto(
-      allow_soft_placement=True, log_device_placement=False)
-  run_config = estimator.RunConfig(
-    model_dir=FLAGS.model_dir,
-    session_config=config_proto
-  )
-  # if FLAGS.use_xla and not FLAGS.use_tpu:
-  #   config_proto.graph_options.optimizer_options.global_jit_level = (
-  #       tf.OptimizerOptions.ON_1)
+  # hparams = retinanet_model.default_hparams()
+  # hparams.parse(FLAGS.hparams)
   #
-  # run_config = tpu_config.RunConfig(
-  #     master=tpu_grpc_url,
-  #     evaluation_master=FLAGS.eval_master,
-  #     model_dir=FLAGS.model_dir,
-  #     log_step_count_steps=FLAGS.iterations_per_loop,
-  #     session_config=config_proto,
-  #     tpu_config=tpu_config.TPUConfig(FLAGS.iterations_per_loop,
-  #                                     FLAGS.num_shards))
-
-  # TPU Estimator
-  if FLAGS.mode == 'train':
-    train_estimator = estimator.Estimator(
-      model_fn=retinanet_model.retinanet_model_fn,
-      config=run_config,
-      params=params
-    )
-    # train_estimator = tpu_estimator.TPUEstimator(
-    #     model_fn=retinanet_model.retinanet_model_fn,
-    #     use_tpu=FLAGS.use_tpu,
-    #     train_batch_size=FLAGS.train_batch_size,
-    #     config=run_config,
-    #     params=params)
-    train_estimator.train(
-        input_fn=dataloader.InputReader(FLAGS.training_file_pattern,
-                                        is_training=True),
-        max_steps=int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
-                      FLAGS.train_batch_size))
-
-    if FLAGS.eval_after_training:
-      # Run evaluation after training finishes.
-      eval_params = dict(
-          params,
-          use_tpu=False,
-          input_rand_hflip=False,
-          skip_crowd=False,
-          resnet_checkpoint=None,
-          is_training_bn=False,
-      )
-      eval_estimator = tpu_estimator.TPUEstimator(
-          model_fn=retinanet_model.retinanet_model_fn,
-          use_tpu=False,
-          train_batch_size=FLAGS.train_batch_size,
-          eval_batch_size=1,
-          config=run_config,
-          params=eval_params)
-      eval_results = eval_estimator.evaluate(
-          input_fn=dataloader.InputReader(FLAGS.validation_file_pattern,
-                                          is_training=False),
-          steps=FLAGS.eval_steps)
-      tf.logging.info('Eval results: %s' % eval_results)
-
-  elif FLAGS.mode == 'eval':
-    # eval only runs on CPU or GPU host with batch_size = 1
-
-    # Override the default options: disable randomization in the input pipeline
-    # and don't run on the TPU.
-    eval_params = dict(
-        params,
-        use_tpu=False,
-        input_rand_hflip=False,
-        skip_crowd=False,
-        resnet_checkpoint=None,
-        is_training_bn=False,
-    )
-
-    eval_estimator = tpu_estimator.TPUEstimator(
-        model_fn=retinanet_model.retinanet_model_fn,
-        use_tpu=False,
-        eval_batch_size=1,
-        train_batch_size=FLAGS.train_batch_size,
-        config=run_config,
-        params=eval_params)
-
-    def terminate_eval():
-      tf.logging.info('Terminating eval after %d seconds of no checkpoints' %
-                      FLAGS.eval_timeout)
-      return True
-
-    # Run evaluation when there's a new checkpoint
-    for ckpt in evaluation.checkpoints_iterator(
-        FLAGS.model_dir,
-        min_interval_secs=FLAGS.min_eval_interval,
-        timeout=FLAGS.eval_timeout,
-        timeout_fn=terminate_eval):
-
-      tf.logging.info('Starting to evaluate.')
-      try:
-        eval_results = eval_estimator.evaluate(
-            input_fn=dataloader.InputReader(FLAGS.validation_file_pattern,
-                                            is_training=False),
-            steps=FLAGS.eval_steps)
-        tf.logging.info('Eval results: %s' % eval_results)
-
-        # Terminate eval job when final checkpoint is reached
-        current_step = int(os.path.basename(ckpt).split('-')[1])
-        total_step = int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
-                         FLAGS.train_batch_size)
-        if current_step >= total_step:
-          tf.logging.info('Evaluation finished after training step %d' %
-                          current_step)
-          break
-
-      except tf.errors.NotFoundError:
-        # Since the coordinator is on a different job than the TPU worker,
-        # sometimes the TPU worker does not finish initializing until long after
-        # the CPU job tells it to start evaluating. In this case, the checkpoint
-        # file could have been deleted already.
-        tf.logging.info('Checkpoint %s no longer exists, skipping checkpoint' %
-                        ckpt)
-  else:
-    tf.logging.info('Mode not found.')
+  # params = dict(
+  #     hparams.values(),
+  #     # num_shards=FLAGS.num_shards,
+  #     # use_tpu=FLAGS.use_tpu,
+  #     resnet_checkpoint=FLAGS.resnet_checkpoint,
+  #     val_json_file=FLAGS.val_json_file,
+  #     mode=FLAGS.mode,
+  # )
+  # config_proto = tf.ConfigProto(
+  #     allow_soft_placement=True, log_device_placement=False)
+  # run_config = estimator.RunConfig(
+  #   model_dir=FLAGS.model_dir,
+  #   session_config=config_proto
+  # )
+  # # if FLAGS.use_xla and not FLAGS.use_tpu:
+  # #   config_proto.graph_options.optimizer_options.global_jit_level = (
+  # #       tf.OptimizerOptions.ON_1)
+  # #
+  # # run_config = tpu_config.RunConfig(
+  # #     master=tpu_grpc_url,
+  # #     evaluation_master=FLAGS.eval_master,
+  # #     model_dir=FLAGS.model_dir,
+  # #     log_step_count_steps=FLAGS.iterations_per_loop,
+  # #     session_config=config_proto,
+  # #     tpu_config=tpu_config.TPUConfig(FLAGS.iterations_per_loop,
+  # #                                     FLAGS.num_shards))
+  #
+  # # TPU Estimator
+  # if FLAGS.mode == 'train':
+  #   train_estimator = estimator.Estimator(
+  #     model_fn=retinanet_model.retinanet_model_fn,
+  #     config=run_config,
+  #     params=params
+  #   )
+  #   # train_estimator = tpu_estimator.TPUEstimator(
+  #   #     model_fn=retinanet_model.retinanet_model_fn,
+  #   #     use_tpu=FLAGS.use_tpu,
+  #   #     train_batch_size=FLAGS.train_batch_size,
+  #   #     config=run_config,
+  #   #     params=params)
+  #   train_estimator.train(
+  #       input_fn=dataloader.InputReader(FLAGS.training_file_pattern,
+  #                                       is_training=True),
+  #       max_steps=int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
+  #                     FLAGS.train_batch_size))
+  #
+  #   if FLAGS.eval_after_training:
+  #     # Run evaluation after training finishes.
+  #     eval_params = dict(
+  #         params,
+  #         use_tpu=False,
+  #         input_rand_hflip=False,
+  #         skip_crowd=False,
+  #         resnet_checkpoint=None,
+  #         is_training_bn=False,
+  #     )
+  #     eval_estimator = tpu_estimator.TPUEstimator(
+  #         model_fn=retinanet_model.retinanet_model_fn,
+  #         use_tpu=False,
+  #         train_batch_size=FLAGS.train_batch_size,
+  #         eval_batch_size=1,
+  #         config=run_config,
+  #         params=eval_params)
+  #     eval_results = eval_estimator.evaluate(
+  #         input_fn=dataloader.InputReader(FLAGS.validation_file_pattern,
+  #                                         is_training=False),
+  #         steps=FLAGS.eval_steps)
+  #     tf.logging.info('Eval results: %s' % eval_results)
+  #
+  # elif FLAGS.mode == 'eval':
+  #   # eval only runs on CPU or GPU host with batch_size = 1
+  #
+  #   # Override the default options: disable randomization in the input pipeline
+  #   # and don't run on the TPU.
+  #   eval_params = dict(
+  #       params,
+  #       use_tpu=False,
+  #       input_rand_hflip=False,
+  #       skip_crowd=False,
+  #       resnet_checkpoint=None,
+  #       is_training_bn=False,
+  #   )
+  #
+  #   eval_estimator = tpu_estimator.TPUEstimator(
+  #       model_fn=retinanet_model.retinanet_model_fn,
+  #       use_tpu=False,
+  #       eval_batch_size=1,
+  #       train_batch_size=FLAGS.train_batch_size,
+  #       config=run_config,
+  #       params=eval_params)
+  #
+  #   def terminate_eval():
+  #     tf.logging.info('Terminating eval after %d seconds of no checkpoints' %
+  #                     FLAGS.eval_timeout)
+  #     return True
+  #
+  #   # Run evaluation when there's a new checkpoint
+  #   for ckpt in evaluation.checkpoints_iterator(
+  #       FLAGS.model_dir,
+  #       min_interval_secs=FLAGS.min_eval_interval,
+  #       timeout=FLAGS.eval_timeout,
+  #       timeout_fn=terminate_eval):
+  #
+  #     tf.logging.info('Starting to evaluate.')
+  #     try:
+  #       eval_results = eval_estimator.evaluate(
+  #           input_fn=dataloader.InputReader(FLAGS.validation_file_pattern,
+  #                                           is_training=False),
+  #           steps=FLAGS.eval_steps)
+  #       tf.logging.info('Eval results: %s' % eval_results)
+  #
+  #       # Terminate eval job when final checkpoint is reached
+  #       current_step = int(os.path.basename(ckpt).split('-')[1])
+  #       total_step = int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
+  #                        FLAGS.train_batch_size)
+  #       if current_step >= total_step:
+  #         tf.logging.info('Evaluation finished after training step %d' %
+  #                         current_step)
+  #         break
+  #
+  #     except tf.errors.NotFoundError:
+  #       # Since the coordinator is on a different job than the TPU worker,
+  #       # sometimes the TPU worker does not finish initializing until long after
+  #       # the CPU job tells it to start evaluating. In this case, the checkpoint
+  #       # file could have been deleted already.
+  #       tf.logging.info('Checkpoint %s no longer exists, skipping checkpoint' %
+  #                       ckpt)
+  # else:
+  #   tf.logging.info('Mode not found.')
 
 if __name__ == '__main__':
   tf.logging.set_verbosity(tf.logging.INFO)
