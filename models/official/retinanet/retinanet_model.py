@@ -32,7 +32,7 @@ import anchors
 import coco_metric
 import retinanet_architecture
 from tensorflow import estimator
-from tensorflow.contrib.tpu.python.tpu import bfloat16
+# from tensorflow.contrib.tpu.python.tpu import bfloat16
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_optimizer
 
@@ -207,16 +207,18 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
         resnet_depth=params['resnet_depth'],
         is_training_bn=params['is_training_bn'])
 
-  if params['use_bfloat16']:
-    with bfloat16.bfloat16_scope():
-      cls_outputs, box_outputs = _model_outputs()
-      levels = cls_outputs.keys()
-      for level in levels:
-        cls_outputs[level] = tf.cast(cls_outputs[level], tf.float32)
-        box_outputs[level] = tf.cast(box_outputs[level], tf.float32)
-  else:
-    cls_outputs, box_outputs = _model_outputs()
-    levels = cls_outputs.keys()
+  # if params['use_bfloat16']:
+  #   with bfloat16.bfloat16_scope():
+  #     cls_outputs, box_outputs = _model_outputs()
+  #     levels = cls_outputs.keys()
+  #     for level in levels:
+  #       cls_outputs[level] = tf.cast(cls_outputs[level], tf.float32)
+  #       box_outputs[level] = tf.cast(box_outputs[level], tf.float32)
+  # else:
+  #   cls_outputs, box_outputs = _model_outputs()
+  #   levels = cls_outputs.keys()
+  cls_outputs, box_outputs = _model_outputs()
+  levels = cls_outputs.keys()
 
   # First check if it is in PREDICT mode.
   if mode == tf.estimator.ModeKeys.PREDICT:
