@@ -332,7 +332,6 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     mode=mode,
     loss=total_loss,
     train_op=train_op,
-    eval_metrics=eval_metrics,
     scaffold=scaffold_fn
   )
 
