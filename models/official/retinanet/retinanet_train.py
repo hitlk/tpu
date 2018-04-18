@@ -175,7 +175,8 @@ def main(argv):
     #     params=params)
     train_estimator.train(
         input_fn=dataloader.InputReader(FLAGS.training_file_pattern,
-                                        is_training=True),
+                                        FLAGS.train_batch_size,
+                                        is_training=True,),
         max_steps=int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
                       FLAGS.train_batch_size))
 

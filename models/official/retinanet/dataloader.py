@@ -46,9 +46,10 @@ def _normalize_image(image):
 class InputReader(object):
   """Input reader for the MSCOCO dataset."""
 
-  def __init__(self, file_pattern, is_training):
+  def __init__(self, file_pattern, batch_size, is_training):
     self._file_pattern = file_pattern
     self._is_training = is_training
+    self._batch_size = batch_size
 
   def __call__(self, params):
     input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
@@ -103,8 +104,9 @@ class InputReader(object):
                image_scale)
         return row
 
-    batch_size = params['batch_size']
-
+    # batch_size = params['batch_size']
+    batch_size = self._batch_size
+    
     dataset = tf.data.Dataset.list_files(self._file_pattern)
 
     dataset = dataset.shuffle(buffer_size=1024)
