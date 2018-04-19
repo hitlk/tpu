@@ -254,6 +254,9 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
                                                    labels, params)
 
   if mode == tf.estimator.ModeKeys.TRAIN:
+    tf.summary.scalar('Losses/cls_loss', cls_loss)
+    tf.summary.scalar('Losses/box_loss', box_loss)
+
     optimizer = tf.train.MomentumOptimizer(
         learning_rate, momentum=params['momentum'])
     # if params['use_tpu']:
@@ -270,7 +273,8 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     train_op = None
 
   # Evaluation only works on GPU/CPU host and batch_size=1
-  eval_metrics = None
+  # eval_metrics = None
+  eval_metric_ops = None
   if mode == tf.estimator.ModeKeys.EVAL:
 
     def metric_fn(**kwargs):
@@ -322,7 +326,8 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     for level in range(params['min_level'], params['max_level'] + 1):
       metric_fn_inputs['cls_outputs_%d' % level] = cls_outputs[level]
       metric_fn_inputs['box_outputs_%d' % level] = box_outputs[level]
-    eval_metrics = (metric_fn, metric_fn_inputs)
+    # eval_metrics = (metric_fn, metric_fn_inputs)
+    eval_metric_ops = metric_fn(metric_fn_inputs)
 
   # return tpu_estimator.TPUEstimatorSpec(
   #     mode=mode,
@@ -334,6 +339,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     mode=mode,
     loss=total_loss,
     train_op=train_op,
+    eval_metric_ops=eval_metric_ops,
     scaffold=scaffold_fn()
   )
 
