@@ -308,7 +308,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
       output_metrics.update(coco_metrics)
       return output_metrics
 
-    batch_size = params['batch_size']
+    batch_size = 1
     cls_loss_repeat = tf.reshape(
         tf.tile(tf.expand_dims(cls_loss, 0), [
             batch_size,
