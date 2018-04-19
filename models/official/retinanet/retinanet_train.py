@@ -208,22 +208,36 @@ def main(argv):
 
     # Override the default options: disable randomization in the input pipeline
     # and don't run on the TPU.
-    eval_params = dict(
-        params,
-        use_tpu=False,
-        input_rand_hflip=False,
-        skip_crowd=False,
-        resnet_checkpoint=None,
-        is_training_bn=False,
-    )
+    # eval_params = dict(
+    #     params,
+    #     use_tpu=False,
+    #     input_rand_hflip=False,
+    #     skip_crowd=False,
+    #     resnet_checkpoint=None,
+    #     is_training_bn=False,
+    # )
+    #
+    # eval_estimator = tpu_estimator.TPUEstimator(
+    #     model_fn=retinanet_model.retinanet_model_fn,
+    #     use_tpu=False,
+    #     eval_batch_size=1,
+    #     train_batch_size=FLAGS.train_batch_size,
+    #     config=run_config,
+    #     params=eval_params)
 
-    eval_estimator = tpu_estimator.TPUEstimator(
-        model_fn=retinanet_model.retinanet_model_fn,
-        use_tpu=False,
-        eval_batch_size=1,
-        train_batch_size=FLAGS.train_batch_size,
-        config=run_config,
-        params=eval_params)
+    eval_params = dict(
+      params,
+      input_rand_hflip=False,
+      skip_crowd=False,
+      resnet_checkpoint=None,
+      is_training_bn=False
+    )
+    eval_estimator = estimator.Estimator(
+      model_fn=retinanet_model.retinanet_model_fn,
+      model_dir=FLAGS.model_dir,
+      config=run_config,
+      params=eval_params
+    )
 
     def terminate_eval():
       tf.logging.info('Terminating eval after %d seconds of no checkpoints' %
@@ -241,6 +255,7 @@ def main(argv):
       try:
         eval_results = eval_estimator.evaluate(
             input_fn=dataloader.InputReader(FLAGS.validation_file_pattern,
+                                            1,
                                             is_training=False),
             steps=FLAGS.eval_steps)
         tf.logging.info('Eval results: %s' % eval_results)
