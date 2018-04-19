@@ -327,7 +327,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
       metric_fn_inputs['cls_outputs_%d' % level] = cls_outputs[level]
       metric_fn_inputs['box_outputs_%d' % level] = box_outputs[level]
     # eval_metrics = (metric_fn, metric_fn_inputs)
-    eval_metric_ops = metric_fn(metric_fn_inputs)
+    eval_metric_ops = metric_fn(**metric_fn_inputs)
 
   # return tpu_estimator.TPUEstimatorSpec(
   #     mode=mode,
