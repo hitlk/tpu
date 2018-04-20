@@ -144,6 +144,9 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
   # Sum all positives in a batch for normalization and avoid zero
   # num_positives_sum, which would lead to inf loss during training
   num_positives_sum = tf.reduce_sum(labels['mean_num_positives']) + 1.0
+
+  tf.summary.scalar('num_positives', num_positives_sum)
+
   levels = cls_outputs.keys()
 
   cls_losses = []
@@ -249,6 +252,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
   learning_rate = _learning_rate_schedule(
       params['learning_rate'], params['lr_warmup_init'],
       params['lr_warmup_step'], params['lr_drop_step'], global_step)
+  tf.summary.scalar('learning_rate', learning_rate)
   # cls_loss and box_loss are for logging. only total_loss is optimized.
   total_loss, cls_loss, box_loss = _detection_loss(cls_outputs, box_outputs,
                                                    labels, params)

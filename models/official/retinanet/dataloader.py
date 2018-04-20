@@ -114,16 +114,16 @@ class InputReader(object):
       dataset = dataset.repeat()
 
     def prefetch_dataset(filename):
-      dataset = tf.data.TFRecordDataset(filename).prefetch(1)
+      dataset = tf.data.TFRecordDataset(filename, buffer_size=8 * 1000 * 1000)
       return dataset
 
     dataset = dataset.apply(
         tf.contrib.data.parallel_interleave(
             prefetch_dataset, cycle_length=32, sloppy=True))
-    dataset = dataset.shuffle(20)
+    dataset = dataset.shuffle(buffer_size=2048)
 
     dataset = dataset.map(_dataset_parser, num_parallel_calls=64)
-    dataset = dataset.prefetch(batch_size)
+    dataset = dataset.prefetch(512)
     dataset = dataset.apply(
         tf.contrib.data.batch_and_drop_remainder(batch_size))
     dataset = dataset.prefetch(1)
