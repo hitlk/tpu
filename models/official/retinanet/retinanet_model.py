@@ -240,10 +240,19 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
 
     def scaffold_fn():
       """Loads pretrained model through scaffold function."""
-      tf.train.init_from_checkpoint(params['resnet_checkpoint'], {
-          '/': 'resnet%s/' % params['resnet_depth'],
-      })
-      return tf.train.Scaffold()
+      # tf.train.init_from_checkpoint(params['resnet_checkpoint'], {
+      #     '/': 'resnet%s/' % params['resnet_depth'],
+      # })
+      variables_to_restore = {}
+      for variable in tf.global_variables():
+        variable_name = variable.op.name
+        if variable_name.startswith('resnet50') and 'Adam' not in variable_name:
+          var_name = variable_name.replace('resnet50/', '')
+          variables_to_restore[var_name] = variable
+      init_saver = tf.train.Saver(variables_to_restore)
+      def init_fn(scaffold, sess):
+        init_saver.restore(sess, params['resnet_checkpoint'])
+      return tf.train.Scaffold(init_fn=init_fn)
   else:
     scaffold_fn = None
 
