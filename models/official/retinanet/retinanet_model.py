@@ -249,10 +249,10 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
 
   # Set up training loss and learning rate.
   global_step = tf.train.get_global_step()
-  learning_rate = _learning_rate_schedule(
-      params['learning_rate'], params['lr_warmup_init'],
-      params['lr_warmup_step'], params['lr_drop_step'], global_step)
-  tf.summary.scalar('learning_rate', learning_rate)
+  # learning_rate = _learning_rate_schedule(
+  #     params['learning_rate'], params['lr_warmup_init'],
+  #     params['lr_warmup_step'], params['lr_drop_step'], global_step)
+  # tf.summary.scalar('learning_rate', learning_rate)
   # cls_loss and box_loss are for logging. only total_loss is optimized.
   total_loss, cls_loss, box_loss = _detection_loss(cls_outputs, box_outputs,
                                                    labels, params)
@@ -261,8 +261,9 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     tf.summary.scalar('Losses/cls_loss', cls_loss)
     tf.summary.scalar('Losses/box_loss', box_loss)
 
-    optimizer = tf.train.MomentumOptimizer(
-        learning_rate, momentum=params['momentum'])
+    # optimizer = tf.train.MomentumOptimizer(
+    #     learning_rate, momentum=params['momentum'])
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
     # if params['use_tpu']:
     #   optimizer = tpu_optimizer.CrossShardOptimizer(optimizer)
 
