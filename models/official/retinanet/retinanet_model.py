@@ -36,7 +36,7 @@ from tensorflow import estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_optimizer
 
-import MyOptimizer
+from MyOptimizer import MyOptimizer
 
 # A collection of Learning Rate schecules:
 # third_party/tensorflow_models/object_detection/utils/learning_schedules.py
@@ -273,7 +273,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
 
     # optimizer = tf.train.MomentumOptimizer(
     #     learning_rate, momentum=params['momentum'])
-    optimizer = MyOptimizer(0.001)
+    optimizer = MyOptimizer(lr=0.001)
 
     # if params['use_tpu']:
     #   optimizer = tpu_optimizer.CrossShardOptimizer(optimizer)
