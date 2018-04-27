@@ -36,6 +36,7 @@ from tensorflow import estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_optimizer
 
+import MyOptimizer
 
 # A collection of Learning Rate schecules:
 # third_party/tensorflow_models/object_detection/utils/learning_schedules.py
@@ -272,7 +273,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
 
     # optimizer = tf.train.MomentumOptimizer(
     #     learning_rate, momentum=params['momentum'])
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+    optimizer = MyOptimizer(0.001)
 
     # if params['use_tpu']:
     #   optimizer = tpu_optimizer.CrossShardOptimizer(optimizer)
@@ -284,7 +285,6 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
         params['resnet_depth']) if variable_filter_fn else None
     with tf.control_dependencies(update_ops):
       train_op = optimizer.minimize(total_loss, global_step, var_list=var_list)
-      tf.summary.scalar('learning_rate', train_op._lr)
   else:
     train_op = None
 
