@@ -29,6 +29,8 @@ from object_detection import preprocessor
 from object_detection import tf_example_decoder
 
 
+_ASPECT_RATIO = 1.333
+
 def _normalize_image(image):
   """Normalize the image to zero mean and unit variance."""
   offset = tf.constant([0.485, 0.456, 0.406])
@@ -86,7 +88,7 @@ class InputReader(object):
         image, _ = preprocessor.resize_to_range(
             image,
             min_dimension=params['image_size'],
-            max_dimension=params['image_size'])
+            max_dimension=params['image_size'] * _ASPECT_RATIO)
         image_scale = tf.to_float(image_original_shape[0]) / tf.to_float(
             tf.shape(image)[0])
         image, boxes = preprocessor.scale_boxes_to_pixel_coordinates(
