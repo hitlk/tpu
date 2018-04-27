@@ -88,7 +88,7 @@ class InputReader(object):
         image, _ = preprocessor.resize_to_range(
             image,
             min_dimension=params['image_size'],
-            max_dimension=params['image_size'] * _ASPECT_RATIO)
+            max_dimension=params['image_size'])
         image_scale = tf.to_float(image_original_shape[0]) / tf.to_float(
             tf.shape(image)[0])
         image, boxes = preprocessor.scale_boxes_to_pixel_coordinates(
