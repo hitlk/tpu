@@ -273,6 +273,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     # optimizer = tf.train.MomentumOptimizer(
     #     learning_rate, momentum=params['momentum'])
     optimizer = tf.train.AdamOptimizer(learning_rate=0.001)
+    tf.summary.scalar('learning_rate', optimizer._lr_t)
     # if params['use_tpu']:
     #   optimizer = tpu_optimizer.CrossShardOptimizer(optimizer)
 
