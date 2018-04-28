@@ -370,6 +370,9 @@ class AnchorLabeler(object):
     # Unpack labels.
     cls_targets_dict = self._unpack_labels(cls_targets)
     box_targets_dict = self._unpack_labels(box_targets)
+
+    tf.assert_greater_equal(matches.match_results, -1)
+
     num_positives = tf.reduce_sum(
         tf.cast(tf.not_equal(matches.match_results, -1), tf.float32))
 
