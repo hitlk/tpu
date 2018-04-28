@@ -132,7 +132,12 @@ def _cls_loss(prediction_tensor,
                            (1 - target_tensor) * (1 - alpha))
   focal_cross_entropy_loss = (modulating_factor * alpha_weight_factor *
                               per_entry_cross_ent)
-  return focal_cross_entropy_loss * weights
+  total_loss = tf.reduce_sum(focal_cross_entropy_loss * weights)
+  total_loss /= normalizer
+
+  return total_loss
+
+
 def _box_loss(box_outputs, box_targets, num_positives, delta=0.1):
   """Computes box regression loss."""
   # delta is typically around the mean value of regression target.
