@@ -299,7 +299,7 @@ class Anchors(object):
 class AnchorLabeler(object):
   """Labeler for multiscale anchor boxes."""
 
-  def __init__(self, anchors, num_classes, match_threshold=0.5):
+  def __init__(self, anchors, num_classes, match_threshold=0.5, unmatched_threshold=0.4):
     """Constructs anchor labeler to assign labels to anchors.
 
     Args:
@@ -311,7 +311,7 @@ class AnchorLabeler(object):
     similarity_calc = region_similarity_calculator.IouSimilarity()
     matcher = argmax_matcher.ArgMaxMatcher(
         match_threshold,
-        unmatched_threshold=match_threshold,
+        unmatched_threshold=unmatched_threshold,
         negatives_lower_than_unmatched=True,
         force_match_for_each_row=True)
     box_coder = faster_rcnn_box_coder.FasterRcnnBoxCoder()
