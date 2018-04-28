@@ -360,7 +360,7 @@ class AnchorLabeler(object):
     anchor_box_list = box_list.BoxList(self._anchors.boxes)
 
     # cls_weights, box_weights are not used
-    cls_targets, _, box_targets, _, matches = self._target_assigner.assign(
+    cls_targets, cls_weights, box_targets, box_weights, matches = self._target_assigner.assign(
         anchor_box_list, gt_box_list, gt_labels)
 
     # class labels start from 1 and the background class = -1
@@ -369,14 +369,14 @@ class AnchorLabeler(object):
 
     # Unpack labels.
     cls_targets_dict = self._unpack_labels(cls_targets)
+    cls_weights_dict = self._unpack_labels(cls_weights)
     box_targets_dict = self._unpack_labels(box_targets)
-
-    tf.assert_greater_equal(matches.match_results, -1)
+    box_weights_dict = self._unpack_labels(box_weights)
 
     num_positives = tf.reduce_sum(
-        tf.cast(tf.not_equal(matches.match_results, -1), tf.float32))
+        tf.cast(tf.greater(matches.match_results, -1), tf.float32))
 
-    return cls_targets_dict, box_targets_dict, num_positives
+    return cls_targets_dict, cls_weights_dict, box_targets_dict, box_weights_dict, num_positives
 
   def generate_detections(self, cls_ouputs, box_outputs, image_id):
     cls_outputs_all = []

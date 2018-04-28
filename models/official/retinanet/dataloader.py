@@ -96,13 +96,13 @@ class InputReader(object):
 
         image = tf.image.pad_to_bounding_box(image, 0, 0, params['image_size'],
                                              params['image_size'])
-        (cls_targets, box_targets,
+        (cls_targets, cls_weights, box_targets, box_weights,
          num_positives) = anchor_labeler.label_anchors(boxes, classes)
 
         source_id = tf.string_to_number(source_id, out_type=tf.float32)
         if params['use_bfloat16']:
           image = tf.cast(image, dtype=tf.bfloat16)
-        row = (image, cls_targets, box_targets, num_positives, source_id,
+        row = (image, cls_targets, cls_weights, box_targets, box_weights, num_positives, source_id,
                image_scale)
         return row
 
@@ -130,7 +130,7 @@ class InputReader(object):
         tf.contrib.data.batch_and_drop_remainder(batch_size))
     dataset = dataset.prefetch(1)
 
-    (images, cls_targets, box_targets, num_positives, source_ids,
+    (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, source_ids,
      image_scales) = dataset.make_one_shot_iterator().get_next()
     labels = {}
     # count num_positives in a batch
@@ -142,7 +142,9 @@ class InputReader(object):
 
     for level in range(params['min_level'], params['max_level'] + 1):
       labels['cls_targets_%d' % level] = cls_targets[level]
+      labels['cls_weights_%d' % level] = cls_weights[level]
       labels['box_targets_%d' % level] = box_targets[level]
+      labels['box_weights_%d' % level] = box_weights[level]
     labels['source_ids'] = source_ids
     labels['image_scales'] = image_scales
     return images, labels

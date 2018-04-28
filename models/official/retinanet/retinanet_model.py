@@ -102,6 +102,37 @@ def _classification_loss(cls_outputs,
   return classification_loss
 
 
+def _cls_loss(prediction_tensor,
+              target_tensor,
+              weights,
+              num_positives,
+              alpha=0.25,
+              gamma=2.0):
+  """Compute loss function.
+  Args:
+    prediction_tensor: A float tensor of size [batch_size, num_anchors, num_classes] representing
+      the predicted logits for each class.
+    target_tensor: A float tensor of size [batch_size, num_anchors, num_classes] representing
+      on-hot encoded classification targets.
+    weights: A float tensor of size [batch_size, num_anchors].
+  """
+  normalizer = num_positives
+  weights = tf.expand_dims(weights, axis=2)
+  per_entry_cross_ent = (tf.nn.sigmoid_cross_entropy_with_logits(
+    labels=target_tensor, logits=prediction_tensor))
+  prediction_probabilities = tf.sigmoid(prediction_tensor)
+  p_t = ((target_tensor * prediction_probabilities) +
+         ((1 - target_tensor) * (1 - prediction_probabilities)))
+  modulating_factor = 1.0
+  if gamma:
+    modulating_factor = tf.pow(1.0 - p_t, gamma)
+  alpha_weight_factor = 1.0
+  if alpha is not None:
+    alpha_weight_factor = (target_tensor * alpha +
+                           (1 - target_tensor) * (1 - alpha))
+  focal_cross_entropy_loss = (modulating_factor * alpha_weight_factor *
+                              per_entry_cross_ent)
+  return focal_cross_entropy_loss * weights
 def _box_loss(box_outputs, box_targets, num_positives, delta=0.1):
   """Computes box regression loss."""
   # delta is typically around the mean value of regression target.
@@ -156,16 +187,32 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
         labels['cls_targets_%d' % level],
         params['num_classes'])
     bs, width, height, _, _ = cls_targets_at_level.get_shape().as_list()
+    # cls_targets_at_level = tf.reshape(cls_targets_at_level,
+    #                                   [bs, width, height, -1])
+    # cls_losses.append(
+    #     _classification_loss(
+    #         cls_outputs[level],
+    #         cls_targets_at_level,
+    #         num_positives_sum,
+    #         alpha=params['alpha'],
+    #         gamma=params['gamma']))
     cls_targets_at_level = tf.reshape(cls_targets_at_level,
-                                      [bs, width, height, -1])
-    box_targets_at_level = labels['box_targets_%d' % level]
+                                      [bs, -1, params['num_classes']])
+    cls_outputs_at_level = cls_outputs[level]
+    cls_outputs_at_level = tf.reshape(cls_outputs_at_level,
+                                      [bs, -1, params['num_classes']])
+    cls_weights_at_level = labels['cls_weights_%d' % level]
+    cls_weights_at_level = tf.reshape(cls_weights_at_level,
+                                      [bs, -1])
+
     cls_losses.append(
-        _classification_loss(
-            cls_outputs[level],
-            cls_targets_at_level,
-            num_positives_sum,
-            alpha=params['alpha'],
-            gamma=params['gamma']))
+      _cls_loss(
+        cls_outputs_at_level,
+        cls_targets_at_level,
+        cls_weights_at_level,
+        num_positives_sum))
+
+    box_targets_at_level = labels['box_targets_%d' % level]
     box_losses.append(
         _box_loss(
             box_outputs[level],
