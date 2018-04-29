@@ -193,7 +193,7 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
         params['num_classes'])
     bs, width, height, _, _ = cls_targets_at_level.get_shape().as_list()
     # cls_targets_at_level = tf.reshape(cls_targets_at_level,
-                                       [bs, width, height, -1])
+    #                                    [bs, width, height, -1])
     # cls_losses.append(
     #     _classification_loss(
     #         cls_outputs[level],
