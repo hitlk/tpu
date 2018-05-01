@@ -182,6 +182,7 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
   num_negatives_sum = tf.reduce_sum(labels['mean_num_negatives'])
   num_ignored_sum = tf.reduce_sum(labels['mean_num_ignored'])
 
+  # summary
   tf.summary.scalar('num_positives', num_positives_sum)
   tf.summary.scalar('num_negatives', num_negatives_sum)
   tf.summary.scalar('num_ignored', num_ignored_sum)
