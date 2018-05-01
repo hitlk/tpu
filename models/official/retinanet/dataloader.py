@@ -97,13 +97,13 @@ class InputReader(object):
         image = tf.image.pad_to_bounding_box(image, 0, 0, params['image_size'],
                                              params['image_size'])
         (cls_targets, cls_weights, box_targets, box_weights,
-         num_positives) = anchor_labeler.label_anchors(boxes, classes)
+         num_positives, num_negatives, num_ignored) = anchor_labeler.label_anchors(boxes, classes)
 
         source_id = tf.string_to_number(source_id, out_type=tf.float32)
         if params['use_bfloat16']:
           image = tf.cast(image, dtype=tf.bfloat16)
-        row = (image, cls_targets, cls_weights, box_targets, box_weights, num_positives, source_id,
-               image_scale)
+        row = (image, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored,
+               source_id, image_scale)
         return row
 
     # batch_size = params['batch_size']
@@ -130,7 +130,7 @@ class InputReader(object):
         tf.contrib.data.batch_and_drop_remainder(batch_size))
     dataset = dataset.prefetch(1)
 
-    (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, source_ids,
+    (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
      image_scales) = dataset.make_one_shot_iterator().get_next()
     labels = {}
     # count num_positives in a batch
@@ -139,6 +139,20 @@ class InputReader(object):
         tf.tile(tf.expand_dims(num_positives_batch, 0), [
             batch_size,
         ]), [batch_size, 1])
+
+    num_negatives_batch = tf.reduce_mean(num_negatives)
+    labels['mean_num_negatives'] = tf.reshape(
+        tf.tile(tf.expand_dims(num_negatives_batch, 0), [
+            batch_size,
+        ]), [batch_size, 1]
+    )
+
+    num_ignored_batch = tf.reduce_mean(num_ignored)
+    labels['mean_num_ignored'] = tf.reshape(
+        tf.tile(tf.expand_dims(num_ignored_batch, 0), [
+            batch_size
+        ]), [batch_size, 1]
+    )
 
     for level in range(params['min_level'], params['max_level'] + 1):
       labels['cls_targets_%d' % level] = cls_targets[level]

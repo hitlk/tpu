@@ -375,8 +375,13 @@ class AnchorLabeler(object):
 
     num_positives = tf.reduce_sum(
         tf.cast(tf.greater(matches.match_results, -1), tf.float32))
+    num_negatives = tf.reduce_sum(
+      tf.cast(tf.equal(matches.match_results, -1), tf.float32))
+    num_ignored = tf.reduce_sum(
+      tf.cast(tf.equal(matches.match_results, -2), tf.float32))
 
-    return cls_targets_dict, cls_weights_dict, box_targets_dict, box_weights_dict, num_positives
+    return cls_targets_dict, cls_weights_dict, box_targets_dict, box_weights_dict, \
+           num_positives, num_negatives, num_ignored
 
   def generate_detections(self, cls_ouputs, box_outputs, image_id):
     cls_outputs_all = []

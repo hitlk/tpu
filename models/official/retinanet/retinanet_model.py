@@ -179,8 +179,12 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
   # Sum all positives in a batch for normalization and avoid zero
   # num_positives_sum, which would lead to inf loss during training
   num_positives_sum = tf.reduce_sum(labels['mean_num_positives']) + 1.0
+  num_negatives_sum = tf.reduce_sum(labels['mean_num_negatives'])
+  num_ignored_sum = tf.reduce_sum(labels['mean_num_ignored'])
 
   tf.summary.scalar('num_positives', num_positives_sum)
+  tf.summary.scalar('num_negatives', num_negatives_sum)
+  tf.summary.scalar('num_ignored', num_ignored_sum)
 
   levels = cls_outputs.keys()
 
