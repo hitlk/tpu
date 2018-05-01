@@ -48,7 +48,7 @@ def _learning_rate_schedule(base_learning_rate, lr_warmup_init, lr_warmup_step,
       (lr_warmup_init + lr_warmup_remainder * (float(step) / lr_warmup_step),
        step) for step in range(0, lr_warmup_step, max(1, lr_warmup_step // 100))
   ]
-  lr_schedule = linear_warmup + [[1.0, lr_warmup_step], [0.1, lr_drop_step], [0.01, 160000], [0.1, 180000], [0.01, 270000]]
+  lr_schedule = linear_warmup + [[1.0, lr_warmup_step], [0.1, lr_drop_step], [0.01, 160000]]
   learning_rate = base_learning_rate
   for mult, start_global_step in lr_schedule:
     learning_rate = tf.where(global_step < start_global_step, learning_rate,
