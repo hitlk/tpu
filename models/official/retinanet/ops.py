@@ -20,6 +20,6 @@ def group_norm(x, G=32, esp=1e-5, name=None):
     beta = tf.reshape(beta, [1, C, 1, 1])
     gamma = tf.reshape(gamma, [1, C, 1, 1])
     output = tf.reshape(x, [N, C, H, W]) * gamma + beta
-    output = tf.transpose(output, [0, 3, 1, 2])
+    output = tf.transpose(output, [0, 2, 3, 1])
 
     return output
