@@ -104,7 +104,7 @@ def group_norm_relu(inputs,
   Returns:
     A normalized `Tensor` with the same `data_format`.
   """
-  inputs = ops.group_norm(inputs)
+  inputs = ops.group_norm(inputs, name=name)
 
   if relu:
     inputs = tf.nn.relu(inputs)
