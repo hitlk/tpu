@@ -5,7 +5,7 @@ from tensorflow import layers
 
 def group_norm(x, G=32, esp=1e-5, name=None):
   """Group normalization."""
-  with tf.name_scope(name, 'group_norm', values=[x]):
+  with tf.variable_scope(name, 'group_norm', values=[x]):
     x = tf.transpose(x, [0, 3, 1, 2])
     N, C, H, W = x.get_shape().as_list()
     G = min(G, C)
