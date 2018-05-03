@@ -266,6 +266,10 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
           params['delta']))
 
   # Sum per level losses to total loss.
+  for i, loss in enumerate(cls_losses):
+    tf.summary.scalar('fl_fpn{}'.format(i + 3), loss)
+  for i, loss in enumerate(box_losses):
+    tf.summary.scalar('bbox_loss_fpn{}'.format(i + 3), loss)
   cls_loss = tf.add_n(cls_losses)
   box_loss = tf.add_n(box_losses)
   cls_loss = tf.check_numerics(cls_loss, 'cls_loss is inf or nan.')
