@@ -527,7 +527,6 @@ def resnet_fpn(features,
           feats_bottom_up[level],
           filters=256,
           kernel_size=(1, 1),
-          kernel_initializer=tf.contrib.layers.xavier_initializer(),
           padding='same',
           name='l%d' % level)
 
@@ -545,7 +544,6 @@ def resnet_fpn(features,
           filters=256,
           strides=(1, 1),
           kernel_size=(3, 3),
-          kernel_initializer=tf.contrib.layers.xavier_initializer(),
           padding='same',
           name='post_hoc_d%d' % level)
 
@@ -559,7 +557,6 @@ def resnet_fpn(features,
           filters=256,
           strides=(2, 2),
           kernel_size=(3, 3),
-          kernel_initializer=tf.contrib.layers.xavier_initializer(),
           padding='same',
           name='p%d' % level)
     # add batchnorm

@@ -154,6 +154,32 @@ def _box_loss(box_outputs, box_targets, num_positives, delta=0.1):
   box_loss /= normalizer
   return box_loss
 
+def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0.1):
+  """Compute loss function.
+
+  Args:
+    prediction_tensor: A float tensor of shape [batch_size, num_anchors,
+      code_size] representing the (encoded) predicted locations of objects.
+    target_tensor: A float tensor of shape [batch_size, num_anchors,
+      code_size] representing the regression targets
+    weights: a float tensor of shape [batch_size, num_anchors]
+
+  Returns:
+    loss: a float tensor of shape [batch_size, num_anchors] tensor
+      representing the value of the loss function.
+  """
+  normalizer = num_positives * 4.0
+  box_loss = tf.reduce_sum(tf.losses.huber_loss(
+    target_tensor,
+    prediction_tensor,
+    delta=delta,
+    weights=tf.expand_dims(weights, axis=2),
+    loss_collection=None,
+    reduction=tf.losses.Reduction.NONE
+  ))
+  box_loss /= normalizer
+
+  return box_loss
 
 def _detection_loss(cls_outputs, box_outputs, labels, params):
   """Computes total detection loss.
@@ -223,12 +249,21 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
         num_positives_sum))
 
     box_targets_at_level = labels['box_targets_%d' % level]
+    box_targets_at_level = tf.reshape(box_targets_at_level,
+                                      [bs, -1, 4])
+    box_outputs_at_level = box_outputs[level]
+    box_outputs_at_level = tf.reshape(box_outputs_at_level,
+                                      [bs, -1, 4])
+    box_weights_at_level = labels['box_weights_%d' % level]
+    box_weights_at_level = tf.reshape(box_weights_at_level,
+                                      [bs, -1])
     box_losses.append(
-        _box_loss(
-            box_outputs[level],
-            box_targets_at_level,
-            num_positives_sum,
-            delta=params['delta']))
+        _bbox_loss(
+          box_outputs_at_level,
+          box_targets_at_level,
+          box_weights_at_level,
+          num_positives_sum,
+          params['delta']))
 
   # Sum per level losses to total loss.
   cls_loss = tf.add_n(cls_losses)

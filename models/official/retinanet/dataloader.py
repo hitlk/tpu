@@ -158,7 +158,7 @@ class InputReader(object):
       labels['cls_targets_%d' % level] = cls_targets[level]
       labels['cls_weights_%d' % level] = cls_weights[level]
       labels['box_targets_%d' % level] = box_targets[level]
-      # labels['box_weights_%d' % level] = box_weights[level]
+      labels['box_weights_%d' % level] = box_weights[level]
     labels['source_ids'] = source_ids
     labels['image_scales'] = image_scales
     return images, labels
