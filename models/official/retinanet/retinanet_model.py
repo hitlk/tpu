@@ -341,7 +341,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
       variables_to_restore = {}
       for variable in tf.global_variables():
         variable_name = variable.op.name
-        if variable_name.startswith('resnet50') and 'Adam' not in variable_name:
+        if variable_name.startswith('resnet50') and 'group_norm' not in variable_name:
           var_name = variable_name.replace('resnet50/', '')
           variables_to_restore[var_name] = variable
       init_saver = tf.train.Saver(variables_to_restore)
