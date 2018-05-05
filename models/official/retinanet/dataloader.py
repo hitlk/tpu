@@ -203,7 +203,7 @@ class InputReader(object):
       labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
     labels['source_ids'] = source_ids
     labels['image_scales'] = image_scales
-    return images, labels, input_anchors
+    return images, labels
 
 
 if __name__ == '__main__':
