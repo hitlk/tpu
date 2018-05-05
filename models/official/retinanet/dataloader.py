@@ -224,7 +224,7 @@ if __name__ == '__main__':
   images, labels, input_anchors = reader_fn(params)
 
   with tf.Session() as sess:
-    for i in range(30):
+    for i in range(5):
       print(sess.run(tf.shape(images)))
       print(sess.run(tf.shape(input_anchors.boxes.get())))
       for v in input_anchors.anchors_list:

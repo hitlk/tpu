@@ -373,7 +373,7 @@ class Anchors(object):
     scales = [scale_octave / float(num_scales) for scale_octave in range(num_scales)]
 
     anchors_list = []
-    for level in (self.min_level, self.max_level + 1):
+    for level in range(self.min_level, self.max_level + 1):
       stride = 2**level
       grid_height = im_height / stride
       grid_width = im_width / stride
