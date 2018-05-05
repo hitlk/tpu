@@ -468,8 +468,6 @@ class AnchorLabeler(object):
     # anchor_box_list = box_list.BoxList(self._anchors.boxes)
     anchor_box_list = self._anchors.boxes
 
-    tf.add_to_collection('my-collection', anchor_box_list.num_boxes())
-
     # cls_weights, box_weights are not used
     cls_targets, cls_weights, box_targets, box_weights, matches = self._target_assigner.assign(
         anchor_box_list, gt_box_list, gt_labels)
@@ -477,6 +475,8 @@ class AnchorLabeler(object):
     # class labels start from 1 and the background class = -1
     cls_targets -= 1
     cls_targets = tf.cast(cls_targets, tf.int32)
+
+    tf.assert_equal(tf.shape(cls_weights)[0], tf.shape(box_weights)[0])
 
     # Unpack labels.
     cls_targets_dict = self._unpack_labels(cls_targets)
