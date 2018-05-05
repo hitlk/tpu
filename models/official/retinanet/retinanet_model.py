@@ -168,7 +168,7 @@ def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0
     loss: a float tensor of shape [batch_size, num_anchors] tensor
       representing the value of the loss function.
   """
-  normalizer = num_positives * 4.0
+  normalizer = num_positives
   box_loss = tf.losses.huber_loss(
     target_tensor,
     prediction_tensor,
@@ -177,12 +177,11 @@ def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0
     loss_collection=None,
     reduction=tf.losses.Reduction.NONE
   )
-  mask = tf.greater(weights, 0)
-  tf.add_to_collection('my-collection', tf.boolean_mask(box_loss, mask))
-  tf.add_to_collection('my-collection', num_positives)
   box_loss = tf.reduce_sum(box_loss)
   box_loss /= normalizer
 
+  tf.add_to_collection('my-collection', num_positives)
+  tf.add_to_collection('my-collection', box_loss)
   return box_loss
 
 def _detection_loss(cls_outputs, box_outputs, labels, params):
