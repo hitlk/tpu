@@ -165,7 +165,7 @@ class InputReader(object):
 
 
 if __name__ == '__main__':
-  reader_fn = InputReader('/data/coco/coco_train.record', 4, True)
+  reader_fn = InputReader('/data/coco/coco_train.record', 8, True)
   params = {
     'min_level': 3,
     'max_level': 7,
@@ -185,5 +185,5 @@ if __name__ == '__main__':
   for level in range(3, 8):
     output_tensor['box_weights_%d' % level] = tf.reduce_sum(labels['box_weights_%d' % level])
   with tf.Session() as sess:
-    for i in range(10):
+    for i in range(30):
       print(sess.run(output_tensor))
