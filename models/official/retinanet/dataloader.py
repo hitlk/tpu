@@ -143,7 +143,9 @@ class InputReader(object):
     dataset = dataset.prefetch(32)
     dataset = dataset.apply(
         tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None, None, None, None],
-                                                                     [None], [None], [None], [None])))
+                                                                     [None], [None],
+                                                                     [None, None, None],
+                                                                     [None, None])))
     dataset = dataset.prefetch(2)
 
     # (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
@@ -171,7 +173,7 @@ class InputReader(object):
     for gt_boxes, gt_classes, gt_weights in zip(gt_boxes_batch, gt_classes_batch, gt_weights_batch):
       input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
                                       params['num_scales'], params['aspect_ratios'],
-                                      params['anchor_scale', feature_map_spatial_dims[0]])
+                                      params['anchor_scale'], feature_map_spatial_dims[0])
       anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
       anchor_labeler.label_anchors(gt_boxes, gt_classes)
 
