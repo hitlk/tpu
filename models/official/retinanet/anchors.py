@@ -439,7 +439,7 @@ class AnchorLabeler(object):
       steps = (grid_height * grid_width) * anchors.get_anchors_per_location()
       steps = tf.cast(steps, tf.int32)
       indices = tf.range(count, count + steps)
-      tf.assert_greater_equal(anchors.boxes.num_boxes(), steps)
+      tf.assert_greater_equal(anchors.boxes.num_boxes(), count + steps, message='anchor box number less than indices')
       tf.assert_greater_equal(tf.shape(labels)[0], steps)
       count = count + steps
       labels_unpacked[level] = tf.reshape(
