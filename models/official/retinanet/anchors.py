@@ -32,8 +32,8 @@ from object_detection import box_list
 from object_detection import faster_rcnn_box_coder
 from object_detection import region_similarity_calculator
 from object_detection import target_assigner
-from object_detection.utils import ops
-from object_detection.core import box_list_ops
+from object_detection import ops
+from object_detection import box_list_ops
 
 # The minimum score to consider a logit for identifying detections.
 MIN_CLASS_SCORE = -5.0
