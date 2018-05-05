@@ -468,6 +468,8 @@ class AnchorLabeler(object):
     # anchor_box_list = box_list.BoxList(self._anchors.boxes)
     anchor_box_list = self._anchors.boxes
 
+    tf.add_to_collection('my-collection', anchor_box_list.num_boxes())
+
     # cls_weights, box_weights are not used
     cls_targets, cls_weights, box_targets, box_weights, matches = self._target_assigner.assign(
         anchor_box_list, gt_box_list, gt_labels)
