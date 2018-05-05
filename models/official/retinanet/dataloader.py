@@ -204,7 +204,7 @@ class InputReader(object):
     #   labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
     # labels['source_ids'] = source_ids
     # labels['image_scales'] = image_scales
-    return images, labels, bboxes, anchor_list
+    return images, labels, bboxes, anchor_list, feature_map_spatial_dims[0]
 
 
 if __name__ == '__main__':
@@ -222,10 +222,11 @@ if __name__ == '__main__':
     'use_bfloat16': False
   }
 
-  images, labels, bboxes, anchor_list = reader_fn(params)
+  images, labels, bboxes, anchor_list, image_size = reader_fn(params)
 
   with tf.Session() as sess:
     for i in range(5):
+      print(sess.run(image_size))
       print(sess.run(tf.shape(bboxes.get())))
       for v in anchor_list:
         print(sess.run(tf.shape(v.get())))
