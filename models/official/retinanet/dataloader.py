@@ -23,13 +23,16 @@ Focal Loss for Dense Object Detection. arXiv:1708.02002
 """
 
 import tensorflow as tf
+import numpy as np
 
 import anchors
 from object_detection import preprocessor
 from object_detection import tf_example_decoder
+from object_detection import shape_utils
 
 
-_ASPECT_RATIO = 1.333
+_ASPECT_RATIO = 1.666
+_COARSEST_STRIDE = 128
 
 def _normalize_image(image):
   """Normalize the image to zero mean and unit variance."""
@@ -53,13 +56,21 @@ class InputReader(object):
     self._is_training = is_training
     self._batch_size = batch_size
 
+  def _get_feature_map_spatial_dims(self, feature_maps):
+    feature_map_shapes = [
+      shape_utils.combined_static_and_dynamic_shape(
+        feature_map) for feature_map in feature_maps
+    ]
+
+    return [(shape[1], shape[2]) for shape in feature_map_shapes]
+
   def __call__(self, params):
-    input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-                                    params['num_scales'],
-                                    params['aspect_ratios'],
-                                    params['anchor_scale'],
-                                    params['image_size'])
-    anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
+    # input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+    #                                 params['num_scales'],
+    #                                 params['aspect_ratios'],
+    #                                 params['anchor_scale'],
+    #                                 params['image_size'])
+    # anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
     example_decoder = tf_example_decoder.TfExampleDecoder()
 
     def _dataset_parser(value):
@@ -85,25 +96,29 @@ class InputReader(object):
         if params['input_rand_hflip']:
           image, boxes = preprocessor.random_horizontal_flip(image, boxes=boxes)
         image_original_shape = tf.shape(image)
-        image, _ = preprocessor.resize_to_range(
+        max_size = params['image_size'] * _ASPECT_RATIO
+        image, new_size = preprocessor.resize_to_range(
             image,
             min_dimension=params['image_size'],
-            max_dimension=params['image_size'])
+            max_dimension=max_size)
         image_scale = tf.to_float(image_original_shape[0]) / tf.to_float(
             tf.shape(image)[0])
         image, boxes = preprocessor.scale_boxes_to_pixel_coordinates(
             image, boxes, keypoints=None)
-
-        image = tf.image.pad_to_bounding_box(image, 0, 0, params['image_size'],
-                                             params['image_size'])
-        (cls_targets, cls_weights, box_targets, box_weights,
-         num_positives, num_negatives, num_ignored) = anchor_labeler.label_anchors(boxes, classes)
+        stride = float(_COARSEST_STRIDE)
+        new_size[0] = int(np.ceil(new_size[0] / stride) * stride)
+        new_size[1] = int(np.ceil(new_size[1] / stride) * stride)
+        image = tf.image.pad_to_bounding_box(image, 0, 0, new_size[0],
+                                             new_size[1])
+        # (cls_targets, cls_weights, box_targets, box_weights,
+        #  num_positives, num_negatives, num_ignored) = anchor_labeler.label_anchors(boxes, classes)
 
         source_id = tf.string_to_number(source_id, out_type=tf.float32)
         if params['use_bfloat16']:
           image = tf.cast(image, dtype=tf.bfloat16)
-        row = (image, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored,
-               source_id, image_scale)
+        # row = (image, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored,
+        #        source_id, image_scale)
+        row = (image, source_id, image_scale, boxes, classes)
         return row
 
     # batch_size = params['batch_size']
@@ -127,11 +142,47 @@ class InputReader(object):
     dataset = dataset.map(_dataset_parser, num_parallel_calls=12)
     dataset = dataset.prefetch(32)
     dataset = dataset.apply(
-        tf.contrib.data.batch_and_drop_remainder(batch_size))
+        tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None], [None], [None])))
     dataset = dataset.prefetch(2)
 
-    (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
-     image_scales) = dataset.make_one_shot_iterator().get_next()
+    # (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
+    #  image_scales) = dataset.make_one_shot_iterator().get_next()
+    (images, source_ids, image_scales, gt_boxes, gt_classes) = dataset.make_one_shot_iterator().get_next()
+    feature_map_spatial_dims = self._get_feature_map_spatial_dims(tf.unstack(images))
+
+    cls_targets_dict = {}
+    cls_weights_dict = {}
+    reg_targets_dict = {}
+    reg_weights_dict = {}
+
+    num_positives_list = []
+
+    gt_boxes_batch = tf.unstack(gt_boxes)
+    gt_classes_batch = tf.unstack(gt_classes)
+    gt_weights_batch = [None] * len(gt_classes_batch)
+    def merge_dict(result, target):
+      for level in range(params['min_level'], params['max_level'] + 1):
+        if level not in result.keys():
+          result[level] = []
+        result[level].append(target[level])
+
+    for gt_boxes, gt_classes, gt_weights in zip(gt_boxes_batch, gt_classes_batch, gt_weights_batch):
+      input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+                                      params['num_scales'], params['aspect_ratios'],
+                                      params['anchor_scale', feature_map_spatial_dims[0]])
+      anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
+      anchor_labeler.label_anchors(gt_boxes, gt_classes)
+
+      cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
+        = anchor_labeler.label_anchors(gt_boxes, gt_classes)
+      merge_dict(cls_targets_dict, cls_targets_single)
+      merge_dict(cls_weights_dict, cls_weights_single)
+      merge_dict(reg_targets_dict, reg_targets_single)
+      merge_dict(reg_weights_dict, reg_weights_single)
+      num_positives_list.append(num_positives_single)
+
+    num_positives = tf.stack(num_positives_list)
+
     labels = {}
     # count num_positives in a batch
     num_positives_batch = tf.reduce_mean(num_positives)
@@ -140,25 +191,12 @@ class InputReader(object):
             batch_size,
         ]), [batch_size, 1])
 
-    num_negatives_batch = tf.reduce_mean(num_negatives)
-    labels['mean_num_negatives'] = tf.reshape(
-        tf.tile(tf.expand_dims(num_negatives_batch, 0), [
-            batch_size,
-        ]), [batch_size, 1]
-    )
-
-    num_ignored_batch = tf.reduce_mean(num_ignored)
-    labels['mean_num_ignored'] = tf.reshape(
-        tf.tile(tf.expand_dims(num_ignored_batch, 0), [
-            batch_size
-        ]), [batch_size, 1]
-    )
 
     for level in range(params['min_level'], params['max_level'] + 1):
-      labels['cls_targets_%d' % level] = cls_targets[level]
-      labels['cls_weights_%d' % level] = cls_weights[level]
-      labels['box_targets_%d' % level] = box_targets[level]
-      labels['box_weights_%d' % level] = box_weights[level]
+      labels['cls_targets_%d' % level] = tf.stack(cls_targets_dict[level])
+      labels['cls_weights_%d' % level] = tf.stack(cls_weights_dict[level])
+      labels['box_targets_%d' % level] = tf.stack(reg_targets_dict[level])
+      labels['box_weights_%d' % level] = tf.stack[reg_weights_dict[level]]
     labels['source_ids'] = source_ids
     labels['image_scales'] = image_scales
     return images, labels

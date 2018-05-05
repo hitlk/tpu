@@ -32,6 +32,8 @@ from object_detection import box_list
 from object_detection import faster_rcnn_box_coder
 from object_detection import region_similarity_calculator
 from object_detection import target_assigner
+from object_detection.utils import ops
+from object_detection.core import box_list_ops
 
 # The minimum score to consider a logit for identifying detections.
 MIN_CLASS_SCORE = -5.0
@@ -138,8 +140,7 @@ def _generate_anchor_boxes(image_size, anchor_scale, anchor_configs):
   """Generates multiscale anchor boxes.
 
   Args:
-    image_size: integer number of input image size. The input image has the
-      same dimension for width and height. The image_size should be divided by
+    image_size: tuple of (height, width). The image_size should be divided by
       the largest feature stride 2^max_level.
     anchor_scale: float number representing the scale of size of the base
       anchor to the feature stride 2^level.
@@ -156,14 +157,14 @@ def _generate_anchor_boxes(image_size, anchor_scale, anchor_configs):
     boxes_level = []
     for config in configs:
       stride, octave_scale, aspect = config
-      if image_size % stride != 0:
+      if image_size[0] % stride != 0 or image_size[1] % stride != 0:
         raise ValueError("input size must be divided by the stride.")
       base_anchor_size = anchor_scale * stride * 2**octave_scale
       anchor_size_x_2 = base_anchor_size * aspect[0] / 2.0
       anchor_size_y_2 = base_anchor_size * aspect[1] / 2.0
 
-      x = np.arange(stride / 2, image_size, stride)
-      y = np.arange(stride / 2, image_size, stride)
+      x = np.arange(stride / 2, image_size[1], stride)
+      y = np.arange(stride / 2, image_size[0], stride)
       xv, yv = np.meshgrid(x, y)
       xv = xv.reshape(-1)
       yv = yv.reshape(-1)
@@ -248,6 +249,80 @@ def _generate_detections(cls_outputs, box_outputs, anchor_boxes, image_id):
   detections = np.array(detections[indices[0:100]], dtype=np.float32)
   return detections
 
+def tile_anchors(grid_height,
+                 grid_width,
+                 scales,
+                 aspect_ratios,
+                 base_anchor_size,
+                 anchor_stride,
+                 anchor_offset):
+  """Create a tiled set of anchors strided along a grid in image space.
+
+  This op creates a set of anchor boxes by placing a "basis" collection of
+  boxes with user-specified scales and aspect ratios centered at evenly
+  distributed points along a grid.  The basis collection is specified via the
+  scale and aspect_ratios arguments.  For example, setting scales=[.1, .2, .2]
+  and aspect ratios = [2,2,1/2] means that we create three boxes: one with scale
+  .1, aspect ratio 2, one with scale .2, aspect ratio 2, and one with scale .2
+  and aspect ratio 1/2.  Each box is multiplied by "base_anchor_size" before
+  placing it over its respective center.
+
+  Grid points are specified via grid_height, grid_width parameters as well as
+  the anchor_stride and anchor_offset parameters.
+
+  Args:
+    grid_height: size of the grid in the y direction (int or int scalar tensor)
+    grid_width: size of the grid in the x direction (int or int scalar tensor)
+    scales: a 1-d  (float) tensor representing the scale of each box in the
+      basis set.
+    aspect_ratios: a 1-d (float) tensor representing the aspect ratio of each
+      box in the basis set.  The length of the scales and aspect_ratios tensors
+      must be equal.
+    base_anchor_size: base anchor size as [height, width]
+      (float tensor of shape [2])
+    anchor_stride: difference in centers between base anchors for adjacent grid
+                   positions (float tensor of shape [2])
+    anchor_offset: center of the anchor with scale and aspect ratio 1 for the
+                   upper left element of the grid, this should be zero for
+                   feature networks with only VALID padding and even receptive
+                   field size, but may need some additional calculation if other
+                   padding is used (float tensor of shape [2])
+  Returns:
+    a BoxList holding a collection of N anchor boxes
+  """
+  ratio_sqrts = tf.sqrt(aspect_ratios)
+  heights = scales / ratio_sqrts * base_anchor_size[0]
+  widths = scales * ratio_sqrts * base_anchor_size[1]
+
+  # Get a grid of box centers
+  y_centers = tf.to_float(tf.range(grid_height))
+  y_centers = y_centers * anchor_stride[0] + anchor_offset[0]
+  x_centers = tf.to_float(tf.range(grid_width))
+  x_centers = x_centers * anchor_stride[1] + anchor_offset[1]
+  x_centers, y_centers = ops.meshgrid(x_centers, y_centers)
+
+  widths_grid, x_centers_grid = ops.meshgrid(widths, x_centers)
+  heights_grid, y_centers_grid = ops.meshgrid(heights, y_centers)
+  bbox_centers = tf.stack([y_centers_grid, x_centers_grid], axis=3)
+  bbox_sizes = tf.stack([heights_grid, widths_grid], axis=3)
+  bbox_centers = tf.reshape(bbox_centers, [-1, 2])
+  bbox_sizes = tf.reshape(bbox_sizes, [-1, 2])
+  bbox_corners = _center_size_bbox_to_corners_bbox(bbox_centers, bbox_sizes)
+  return box_list.BoxList(bbox_corners)
+
+def _center_size_bbox_to_corners_bbox(centers, sizes):
+  """Converts bbox center-size representation to corners representation.
+
+  Args:
+    centers: a tensor with shape [N, 2] representing bounding box centers
+    sizes: a tensor with shape [N, 2] representing bounding boxes
+
+  Returns:
+    corners: tensor with shape [N, 4] representing bounding boxes in corners
+      representation
+  """
+  return tf.concat([centers - .5 * sizes, centers + .5 * sizes], 1)
+
 
 class Anchors(object):
   """RetinaNet Anchors class."""
@@ -267,8 +342,7 @@ class Anchors(object):
         [(1, 1), (1.4, 0.7), (0.7, 1.4)] adds three anchors on each level.
       anchor_scale: float number representing the scale of size of the base
         anchor to the feature stride 2^level.
-      image_size: integer number of input image size. The input image has the
-        same dimension for width and height. The image_size should be divided by
+      image_size: tuple of [height, width]. The image_size should be divided by
         the largest feature stride 2^max_level.
     """
     self.min_level = min_level
@@ -278,8 +352,8 @@ class Anchors(object):
     self.anchor_scale = anchor_scale
     self.image_size = image_size
     self.config = self._generate_configs()
-    self.boxes = self._generate_boxes()
-
+    # self.boxes = self._generate_boxes()
+    self.boxes = self._generate()
   def _generate_configs(self):
     """Generate configurations of anchor boxes."""
     return _generate_anchor_configs(self.min_level, self.max_level,
@@ -291,6 +365,36 @@ class Anchors(object):
                                    self.config)
     boxes = tf.convert_to_tensor(boxes, dtype=tf.float32)
     return boxes
+
+  def _generate(self):
+    im_height, im_width = self.image_size
+    aspect_ratios = [w / h for (h, w) in self.aspect_ratios]
+    num_scales = self.num_scales
+    scales = [scale_octave / float(num_scales) for scale_octave in range(num_scales)]
+
+    anchors_list = []
+    for level in (self.min_level, self.max_level + 1):
+      stride = 2**level
+      grid_height = im_height / stride
+      grid_width = im_width / stride
+      base_anchor_size = [self.anchor_scale * stride, self.anchor_scale * stride]
+      anchor_stride = [stride, stride]
+      anchor_offset = [stride / 2, stride / 2]
+
+      scales_grid, aspect_ratios_grid = ops.meshgrid(scales,
+                                                     aspect_ratios)
+      scales_grid = tf.reshape(scales_grid, [-1])
+      aspect_ratios_grid = tf.reshape(aspect_ratios_grid, [-1])
+      anchors = tile_anchors(grid_height,
+                             grid_width,
+                             scales_grid,
+                             aspect_ratios_grid,
+                             base_anchor_size,
+                             anchor_stride,
+                             anchor_offset)
+      anchors_list.append(anchors)
+
+    return box_list_ops.concatenate(anchors_list)
 
   def get_anchors_per_location(self):
     return self.num_scales * len(self.aspect_ratios)
@@ -357,7 +461,8 @@ class AnchorLabeler(object):
       num_positives: scalar tensor storing number of positives in an image.
     """
     gt_box_list = box_list.BoxList(gt_boxes)
-    anchor_box_list = box_list.BoxList(self._anchors.boxes)
+    # anchor_box_list = box_list.BoxList(self._anchors.boxes)
+    anchor_box_list = self._anchors.boxes
 
     # cls_weights, box_weights are not used
     cls_targets, cls_weights, box_targets, box_weights, matches = self._target_assigner.assign(
@@ -375,13 +480,9 @@ class AnchorLabeler(object):
 
     num_positives = tf.reduce_sum(
         tf.cast(tf.greater(matches.match_results, -1), tf.float32))
-    num_negatives = tf.reduce_sum(
-      tf.cast(tf.equal(matches.match_results, -1), tf.float32))
-    num_ignored = tf.reduce_sum(
-      tf.cast(tf.equal(matches.match_results, -2), tf.float32))
 
     return cls_targets_dict, cls_weights_dict, box_targets_dict, box_weights_dict, \
-           num_positives, num_negatives, num_ignored
+           num_positives
 
   def generate_detections(self, cls_ouputs, box_outputs, image_id):
     cls_outputs_all = []
