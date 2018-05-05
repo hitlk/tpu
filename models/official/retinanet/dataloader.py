@@ -200,7 +200,7 @@ class InputReader(object):
       labels['cls_targets_%d' % level] = tf.stack(cls_targets_dict[level])
       labels['cls_weights_%d' % level] = tf.stack(cls_weights_dict[level])
       labels['box_targets_%d' % level] = tf.stack(reg_targets_dict[level])
-      labels['box_weights_%d' % level] = tf.stack[reg_weights_dict[level]]
+      labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
     labels['source_ids'] = source_ids
     labels['image_scales'] = image_scales
     return images, labels
