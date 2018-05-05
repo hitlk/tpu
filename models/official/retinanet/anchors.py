@@ -369,7 +369,7 @@ class Anchors(object):
 
   def _generate(self):
     im_height, im_width = self.image_size
-    print(im_height.eavl(), im_width.eval())
+    print(im_height, im_width)
     aspect_ratios = [w / h for (h, w) in self.aspect_ratios]
     num_scales = self.num_scales
     scales = [scale_octave / float(num_scales) for scale_octave in range(num_scales)]
