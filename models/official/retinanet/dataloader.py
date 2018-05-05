@@ -142,7 +142,7 @@ class InputReader(object):
     dataset = dataset.map(_dataset_parser, num_parallel_calls=12)
     dataset = dataset.prefetch(32)
     dataset = dataset.apply(
-        tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None, None, None],
+        tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None, None, 3],
                                                                      [], [],
                                                                      [None, None],
                                                                      [None, None])))
