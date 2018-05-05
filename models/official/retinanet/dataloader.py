@@ -170,11 +170,15 @@ class InputReader(object):
           result[level] = []
         result[level].append(target[level])
 
-    for gt_boxes, gt_classes, gt_weights in zip(gt_boxes_batch, gt_classes_batch, gt_weights_batch):
-      input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-                                      params['num_scales'], params['aspect_ratios'],
-                                      params['anchor_scale'], feature_map_spatial_dims[0])
-      bboxes, anchor_list = input_anchors._generate()
+    # for gt_boxes, gt_classes, gt_weights in zip(gt_boxes_batch, gt_classes_batch, gt_weights_batch):
+    #   input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+    #                                   params['num_scales'], params['aspect_ratios'],
+    #                                   params['anchor_scale'], feature_map_spatial_dims[0])
+    #   bboxes, anchor_list = input_anchors._generate()
+    input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+                                    params['num_scales'], params['aspect_ratios'],
+                                    params['anchor_scale'], feature_map_spatial_dims[0])
+    bboxes, anchor_list = input_anchors._generate()
     #   anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
     #   anchor_labeler.label_anchors(gt_boxes, gt_classes)
     #
@@ -211,7 +215,7 @@ if __name__ == '__main__':
   reader_fn = InputReader('/data/coco/coco_train.record', 1, True)
   params = {
     'min_level': 3,
-    'max_level': 7,
+    'max_level': 3,
     'num_scales': 3,
     'aspect_ratios': [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)],
     'anchor_scale': 4,
