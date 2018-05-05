@@ -175,7 +175,8 @@ if __name__ == '__main__':
     'image_size': 512,
     'num_classes': 90,
     'skip_crowd': True,
-    'input_rand_hflip': True
+    'input_rand_hflip': True,
+    'use_bfloat16': False
   }
 
   images, labels = reader_fn(params)
