@@ -432,12 +432,15 @@ class AnchorLabeler(object):
     anchors = self._anchors
     count = 0
     for level in range(anchors.min_level, anchors.max_level + 1):
-      feat_size = int(anchors.image_size / 2**level)
-      steps = feat_size**2 * anchors.get_anchors_per_location()
+      # feat_size = int(anchors.image_size / 2**level)
+      grid_height, grid_width = anchors.image_size
+      grid_height = int(grid_height / 2**level)
+      grid_width = int(grid_width / 2**level)
+      steps = (grid_height * grid_width) * anchors.get_anchors_per_location()
       indices = tf.range(count, count + steps)
       count += steps
       labels_unpacked[level] = tf.reshape(
-          tf.gather(labels, indices), [feat_size, feat_size, -1])
+          tf.gather(labels, indices), [grid_height, grid_width, -1])
     return labels_unpacked
 
   def label_anchors(self, gt_boxes, gt_labels):
