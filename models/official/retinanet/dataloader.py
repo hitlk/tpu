@@ -145,7 +145,7 @@ class InputReader(object):
         tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None, None, None],
                                                                      [], [],
                                                                      [None, None],
-                                                                     [None])))
+                                                                     [None, None])))
     dataset = dataset.prefetch(2)
 
     # (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
