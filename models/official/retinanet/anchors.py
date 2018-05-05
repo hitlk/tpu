@@ -441,7 +441,7 @@ class AnchorLabeler(object):
       indices = tf.range(count, count + steps)
       count = count + steps
       labels_unpacked[level] = tf.reshape(
-          tf.gather(labels, indices), [tf.reshape(grid_height, [1]), tf.reshape(grid_width, [1]), -1])
+          tf.gather(labels, indices), tf.stack([grid_height, grid_width, -1]))
     return labels_unpacked
 
   def label_anchors(self, gt_boxes, gt_labels):
