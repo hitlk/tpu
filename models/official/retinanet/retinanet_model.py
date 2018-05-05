@@ -168,10 +168,8 @@ def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0
     loss: a float tensor of shape [batch_size, num_anchors] tensor
       representing the value of the loss function.
   """
-  bbox_pred = tf.summary.tensor_summary('bbox_pred', prediction_tensor)
-  bbox_gt = tf.summary.tensor_summary('bbox_gt', target_tensor)
-  print(bbox_pred)
-  print(bbox_gt)
+  tf.add_to_collection('my-collection', prediction_tensor)
+  tf.add_to_collection('my-collection', target_tensor)
   normalizer = num_positives * 4.0
   box_loss = tf.reduce_sum(tf.losses.huber_loss(
     target_tensor,
@@ -454,6 +452,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     loss=total_loss,
     train_op=train_op,
     eval_metric_ops=eval_metric_ops,
+    training_hooks=[tf.train.LoggingTensorHook(tf.get_collection('my-collection'), 5)],
     scaffold=scaffold_fn() if scaffold_fn is not None else None
   )
 
