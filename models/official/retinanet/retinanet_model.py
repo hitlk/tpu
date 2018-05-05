@@ -168,18 +168,17 @@ def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0
     loss: a float tensor of shape [batch_size, num_anchors] tensor
       representing the value of the loss function.
   """
-  mask = tf.equal(weights, 1)
-  tf.add_to_collection('my-collection', tf.boolean_mask(prediction_tensor, mask))
-  tf.add_to_collection('my-collection', tf.boolean_mask(target_tensor, mask))
   normalizer = num_positives * 4.0
-  box_loss = tf.reduce_sum(tf.losses.huber_loss(
+  box_loss = tf.losses.huber_loss(
     target_tensor,
     prediction_tensor,
     delta=delta,
     weights=tf.expand_dims(weights, axis=2),
     loss_collection=None,
     reduction=tf.losses.Reduction.NONE
-  ))
+  )
+  tf.add_to_collection('my-collection', box_loss, 'box_loss')
+  box_loss = tf.reduce_sum(box_loss)
   box_loss /= normalizer
 
   return box_loss
