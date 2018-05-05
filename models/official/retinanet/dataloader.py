@@ -170,39 +170,39 @@ class InputReader(object):
           result[level] = []
         result[level].append(target[level])
 
-    for gt_boxes, gt_classes, gt_weights in zip(gt_boxes_batch, gt_classes_batch, gt_weights_batch):
-      input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-                                      params['num_scales'], params['aspect_ratios'],
-                                      params['anchor_scale'], feature_map_spatial_dims[0])
-      anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
-      anchor_labeler.label_anchors(gt_boxes, gt_classes)
-
-      cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
-        = anchor_labeler.label_anchors(gt_boxes, gt_classes)
-      merge_dict(cls_targets_dict, cls_targets_single)
-      merge_dict(cls_weights_dict, cls_weights_single)
-      merge_dict(reg_targets_dict, reg_targets_single)
-      merge_dict(reg_weights_dict, reg_weights_single)
-      num_positives_list.append(num_positives_single)
-
-    num_positives = tf.stack(num_positives_list)
-
-    labels = {}
-    # count num_positives in a batch
-    num_positives_batch = tf.reduce_mean(num_positives)
-    labels['mean_num_positives'] = tf.reshape(
-        tf.tile(tf.expand_dims(num_positives_batch, 0), [
-            batch_size,
-        ]), [batch_size, 1])
-
-
-    for level in range(params['min_level'], params['max_level'] + 1):
-      labels['cls_targets_%d' % level] = tf.stack(cls_targets_dict[level])
-      labels['cls_weights_%d' % level] = tf.stack(cls_weights_dict[level])
-      labels['box_targets_%d' % level] = tf.stack(reg_targets_dict[level])
-      labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
-    labels['source_ids'] = source_ids
-    labels['image_scales'] = image_scales
+    # for gt_boxes, gt_classes, gt_weights in zip(gt_boxes_batch, gt_classes_batch, gt_weights_batch):
+    #   input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+    #                                   params['num_scales'], params['aspect_ratios'],
+    #                                   params['anchor_scale'], feature_map_spatial_dims[0])
+    #   anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
+    #   anchor_labeler.label_anchors(gt_boxes, gt_classes)
+    #
+    #   cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
+    #     = anchor_labeler.label_anchors(gt_boxes, gt_classes)
+    #   merge_dict(cls_targets_dict, cls_targets_single)
+    #   merge_dict(cls_weights_dict, cls_weights_single)
+    #   merge_dict(reg_targets_dict, reg_targets_single)
+    #   merge_dict(reg_weights_dict, reg_weights_single)
+    #   num_positives_list.append(num_positives_single)
+    #
+    # num_positives = tf.stack(num_positives_list)
+    #
+    # labels = {}
+    # # count num_positives in a batch
+    # num_positives_batch = tf.reduce_mean(num_positives)
+    # labels['mean_num_positives'] = tf.reshape(
+    #     tf.tile(tf.expand_dims(num_positives_batch, 0), [
+    #         batch_size,
+    #     ]), [batch_size, 1])
+    #
+    #
+    # for level in range(params['min_level'], params['max_level'] + 1):
+    #   labels['cls_targets_%d' % level] = tf.stack(cls_targets_dict[level])
+    #   labels['cls_weights_%d' % level] = tf.stack(cls_weights_dict[level])
+    #   labels['box_targets_%d' % level] = tf.stack(reg_targets_dict[level])
+    #   labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
+    # labels['source_ids'] = source_ids
+    # labels['image_scales'] = image_scales
     return images, labels
 
 
@@ -223,9 +223,6 @@ if __name__ == '__main__':
 
   images, labels = reader_fn(params)
 
-  output_tensor = {}
-  for level in range(3, 8):
-    output_tensor['box_weights_%d' % level] = tf.reduce_sum(labels['box_weights_%d' % level])
   with tf.Session() as sess:
     for i in range(30):
-      print(sess.run(output_tensor))
+      print(sess.run(tf.shape(images)))
