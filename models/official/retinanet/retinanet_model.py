@@ -177,7 +177,7 @@ def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0
     loss_collection=None,
     reduction=tf.losses.Reduction.NONE
   )
-  tf.add_to_collection('my-collection', box_loss, 'box_loss')
+  tf.add_to_collection('my-collection', box_loss)
   box_loss = tf.reduce_sum(box_loss)
   box_loss /= normalizer
 
