@@ -142,12 +142,14 @@ class InputReader(object):
     dataset = dataset.map(_dataset_parser, num_parallel_calls=12)
     dataset = dataset.prefetch(32)
     dataset = dataset.apply(
-        tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None], [None], [None], [None], [None])))
+        tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None, None, None, None],
+                                                                     [None], [None], [None], [None])))
     dataset = dataset.prefetch(2)
 
     # (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
     #  image_scales) = dataset.make_one_shot_iterator().get_next()
     (images, source_ids, image_scales, gt_boxes, gt_classes) = dataset.make_one_shot_iterator().get_next()
+
     feature_map_spatial_dims = self._get_feature_map_spatial_dims(tf.unstack(images))
 
     cls_targets_dict = {}
