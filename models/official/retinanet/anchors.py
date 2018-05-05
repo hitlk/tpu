@@ -430,7 +430,7 @@ class AnchorLabeler(object):
     """Unpacks an array of labels into multiscales labels."""
     labels_unpacked = OrderedDict()
     anchors = self._anchors
-    count = tf.constant(0, dtype=tf.int32)
+    count = tf.convert_to_tensor(0, dtype=tf.int32)
     for level in range(anchors.min_level, anchors.max_level + 1):
       # feat_size = int(anchors.image_size / 2**level)
       grid_height, grid_width = anchors.image_size
@@ -441,9 +441,9 @@ class AnchorLabeler(object):
       indices = tf.range(count, count + steps)
       tf.assert_greater_equal(anchors.boxes.num_boxes(), count + steps, message='anchor box number less than indices')
       tf.assert_greater_equal(tf.shape(labels)[0], count + steps, message='label less than indices')
-      count = count + steps
       labels_unpacked[level] = tf.reshape(
           tf.gather(labels, indices), tf.stack([tf.cast(grid_height, tf.int32), tf.cast(grid_width, tf.int32), -1]))
+      count = count + steps
     return labels_unpacked
 
   def label_anchors(self, gt_boxes, gt_labels):
