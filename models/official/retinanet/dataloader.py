@@ -175,10 +175,10 @@ class InputReader(object):
     #                                   params['num_scales'], params['aspect_ratios'],
     #                                   params['anchor_scale'], feature_map_spatial_dims[0])
     #   bboxes, anchor_list = input_anchors._generate()
-    input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-                                    params['num_scales'], params['aspect_ratios'],
-                                    params['anchor_scale'], feature_map_spatial_dims[0])
-    bboxes, anchor_list = input_anchors._generate()
+    # input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+    #                                 params['num_scales'], params['aspect_ratios'],
+    #                                 params['anchor_scale'], feature_map_spatial_dims[0])
+    # bboxes, anchor_list = input_anchors._generate()
     #   anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
     #   anchor_labeler.label_anchors(gt_boxes, gt_classes)
     #
@@ -208,7 +208,7 @@ class InputReader(object):
     #   labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
     # labels['source_ids'] = source_ids
     # labels['image_scales'] = image_scales
-    return images, labels, bboxes, anchor_list, feature_map_spatial_dims[0]
+    return images, feature_map_spatial_dims[0]
 
 
 if __name__ == '__main__':
@@ -226,7 +226,12 @@ if __name__ == '__main__':
     'use_bfloat16': False
   }
 
-  images, labels, bboxes, anchor_list, image_size = reader_fn(params)
+  images, image_size = reader_fn(params)
+
+  input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+                                  params['num_scales'], params['aspect_ratios'],
+                                  params['anchor_scale'], image_size)
+  bboxes, anchor_list = input_anchors._generate()
 
   with tf.Session() as sess:
     for i in range(5):
