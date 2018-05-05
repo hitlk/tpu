@@ -440,6 +440,7 @@ class AnchorLabeler(object):
       steps = tf.cast(steps, tf.int32)
       indices = tf.range(count, count + steps)
       tf.assert_greater_equal(anchors.boxes.num_boxes(), steps)
+      tf.assert_greater_equal(tf.shape(labels)[0], steps)
       count = count + steps
       labels_unpacked[level] = tf.reshape(
           tf.gather(labels, indices), tf.stack([tf.cast(grid_height, tf.int32), tf.cast(grid_width, tf.int32), -1]))
