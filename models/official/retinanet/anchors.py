@@ -353,7 +353,7 @@ class Anchors(object):
     self.image_size = image_size
     self.config = self._generate_configs()
     # self.boxes = self._generate_boxes()
-    self.boxes = self._generate()
+    # self.boxes = self._generate()
   def _generate_configs(self):
     """Generate configurations of anchor boxes."""
     return _generate_anchor_configs(self.min_level, self.max_level,
@@ -394,7 +394,7 @@ class Anchors(object):
                              anchor_offset)
       anchors_list.append(anchors)
 
-    return box_list_ops.concatenate(anchors_list)
+    return box_list_ops.concatenate(anchors_list), anchors_list
 
   def get_anchors_per_location(self):
     return self.num_scales * len(self.aspect_ratios)
