@@ -63,6 +63,7 @@ def combined_static_and_dynamic_shape(tensor):
   dynamic_tensor_shape = tf.shape(tensor)
   combined_shape = []
   for index, dim in enumerate(static_tensor_shape):
+    print(index)
     if dim is not None:
       combined_shape.append(dim)
     else:

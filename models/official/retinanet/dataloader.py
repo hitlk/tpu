@@ -62,7 +62,7 @@ class InputReader(object):
         feature_map) for feature_map in feature_maps
     ]
 
-    return [(shape[1], shape[2]) for shape in feature_map_shapes]
+    return [(shape[0], shape[1]) for shape in feature_map_shapes]
 
   def __call__(self, params):
     # input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
