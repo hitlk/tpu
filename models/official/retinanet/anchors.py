@@ -394,6 +394,7 @@ class Anchors(object):
                              anchor_offset)
       anchors_list.append(anchors)
 
+    self.anchors_list = anchors_list
     return box_list_ops.concatenate(anchors_list)
 
   def get_anchors_per_location(self):

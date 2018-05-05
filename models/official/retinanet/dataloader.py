@@ -227,3 +227,5 @@ if __name__ == '__main__':
     for i in range(30):
       print(sess.run(tf.shape(images)))
       print(sess.run(tf.shape(input_anchors.boxes.get())))
+      for v in input_anchors.anchors_list:
+        print(sess.run(tf.shape(v.get())))
