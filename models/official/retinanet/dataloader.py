@@ -125,7 +125,7 @@ class InputReader(object):
     dataset = dataset.shuffle(buffer_size=3072)
 
     dataset = dataset.map(_dataset_parser, num_parallel_calls=12)
-    dataset = dataset.prefetch(512)
+    dataset = dataset.prefetch(32)
     dataset = dataset.apply(
         tf.contrib.data.batch_and_drop_remainder(batch_size))
     dataset = dataset.prefetch(2)
@@ -162,3 +162,27 @@ class InputReader(object):
     labels['source_ids'] = source_ids
     labels['image_scales'] = image_scales
     return images, labels
+
+
+if __name__ == '__main__':
+  reader_fn = InputReader('/data/coco/coco_train.record', 4, True)
+  params = {
+    'min_level': 3,
+    'max_level': 7,
+    'num_scales': 3,
+    'aspect_ratios': [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)],
+    'anchor_scale': 4,
+    'image_size': 512,
+    'num_classes': 90,
+    'skip_crowd': True,
+    'input_rand_hflip': True
+  }
+
+  images, labels = reader_fn()
+
+  output_tensor = {}
+  for level in range(3, 8):
+    output_tensor['box_weights_%d' % level] = tf.reduce_sum(labels['box_weights_%d' % level])
+  with tf.Session() as sess:
+    for i in range(10):
+      print(sess.run(output_tensor))
