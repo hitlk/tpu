@@ -233,4 +233,5 @@ if __name__ == '__main__':
   input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
                                   params['num_scales'], params['aspect_ratios'],
                                   params['anchor_scale'], image_size)
-  bboxes, anchor_list = input_anchors._generate()
+  for i in range(5):
+    bboxes, anchor_list = input_anchors._generate()

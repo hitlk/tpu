@@ -308,6 +308,7 @@ def tile_anchors(grid_height,
   bbox_centers = tf.reshape(bbox_centers, [-1, 2])
   bbox_sizes = tf.reshape(bbox_sizes, [-1, 2])
   bbox_corners = _center_size_bbox_to_corners_bbox(bbox_centers, bbox_sizes)
+  print(tf.shape(bbox_corners).eval())
   return box_list.BoxList(bbox_corners)
 
 def _center_size_bbox_to_corners_bbox(centers, sizes):
@@ -367,6 +368,7 @@ class Anchors(object):
     return boxes
 
   def _generate(self):
+    print(self.image_size.eval())
     im_height, im_width = self.image_size
     aspect_ratios = [w / h for (h, w) in self.aspect_ratios]
     num_scales = self.num_scales
