@@ -377,6 +377,7 @@ class Anchors(object):
       stride = 2**level
       grid_height = im_height / stride
       grid_width = im_width / stride
+      print(grid_height.eval(), grid_width.eval())
       base_anchor_size = [self.anchor_scale * stride, self.anchor_scale * stride]
       anchor_stride = [stride, stride]
       anchor_offset = [stride / 2, stride / 2]

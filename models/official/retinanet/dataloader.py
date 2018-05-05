@@ -228,14 +228,9 @@ if __name__ == '__main__':
 
   images, image_size = reader_fn(params)
 
+  sess = tf.InteractiveSession()
+
   input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
                                   params['num_scales'], params['aspect_ratios'],
                                   params['anchor_scale'], image_size)
   bboxes, anchor_list = input_anchors._generate()
-
-  with tf.Session() as sess:
-    for i in range(5):
-      print(sess.run(image_size))
-      print(sess.run(tf.shape(bboxes.get())))
-      for v in anchor_list:
-        print(sess.run(tf.shape(v.get())))
