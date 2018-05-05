@@ -178,7 +178,7 @@ if __name__ == '__main__':
     'input_rand_hflip': True
   }
 
-  images, labels = reader_fn()
+  images, labels = reader_fn(params)
 
   output_tensor = {}
   for level in range(3, 8):
