@@ -107,6 +107,7 @@ class InputReader(object):
             image, boxes, keypoints=None)
         stride = tf.to_float(_COARSEST_STRIDE)
         new_size = tf.ceil(tf.to_float(new_size) / stride) * stride
+        new_size = tf.cast(new_size, tf.int32)
         image = tf.image.pad_to_bounding_box(image, 0, 0, new_size[0],
                                              new_size[1])
         # (cls_targets, cls_weights, box_targets, box_weights,
