@@ -187,7 +187,7 @@ class InputReader(object):
     #
     # num_positives = tf.stack(num_positives_list)
     #
-    # labels = {}
+    labels = {}
     # # count num_positives in a batch
     # num_positives_batch = tf.reduce_mean(num_positives)
     # labels['mean_num_positives'] = tf.reshape(
