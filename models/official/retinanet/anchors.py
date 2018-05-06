@@ -255,8 +255,7 @@ def tile_anchors(grid_height,
                  aspect_ratios,
                  base_anchor_size,
                  anchor_stride,
-                 anchor_offset,
-                 sess):
+                 anchor_offset):
   """Create a tiled set of anchors strided along a grid in image space.
 
   This op creates a set of anchor boxes by placing a "basis" collection of
@@ -292,8 +291,10 @@ def tile_anchors(grid_height,
     a BoxList holding a collection of N anchor boxes
   """
   ratio_sqrts = tf.sqrt(aspect_ratios)
-  heights = 2**scales / ratio_sqrts * base_anchor_size[0]
-  widths = 2**scales * ratio_sqrts * base_anchor_size[1]
+  scale_octave = 2 ** scales
+  heights = scale_octave / ratio_sqrts * base_anchor_size[0]
+  widths = scale_octave * ratio_sqrts * base_anchor_size[1]
+
   # Get a grid of box centers
   y_centers = tf.to_float(tf.range(grid_height))
   y_centers = y_centers * anchor_stride[0] + anchor_offset[0]
@@ -353,7 +354,7 @@ class Anchors(object):
     self.image_size = image_size
     self.config = self._generate_configs()
     # self.boxes = self._generate_boxes()
-    # self.boxes = self._generate()
+    self.boxes = self._generate_anchors()
   def _generate_configs(self):
     """Generate configurations of anchor boxes."""
     return _generate_anchor_configs(self.min_level, self.max_level,
@@ -366,7 +367,7 @@ class Anchors(object):
     boxes = tf.convert_to_tensor(boxes, dtype=tf.float32)
     return boxes
 
-  def _generate(self, sess):
+  def _generate_anchors(self):
     im_height, im_width = self.image_size
     aspect_ratios = [w / h for (h, w) in self.aspect_ratios]
     num_scales = self.num_scales
@@ -391,11 +392,10 @@ class Anchors(object):
                              aspect_ratios_grid,
                              base_anchor_size,
                              anchor_stride,
-                             anchor_offset,
-                             sess)
+                             anchor_offset)
       anchors_list.append(anchors)
 
-    return box_list_ops.concatenate(anchors_list), anchors_list
+    return box_list_ops.concatenate(anchors_list)
 
   def get_anchors_per_location(self):
     return self.num_scales * len(self.aspect_ratios)

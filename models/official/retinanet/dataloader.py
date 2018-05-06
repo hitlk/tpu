@@ -118,7 +118,7 @@ class InputReader(object):
           image = tf.cast(image, dtype=tf.bfloat16)
         # row = (image, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored,
         #        source_id, image_scale)
-        row = (image, source_id, image_scale, boxes, classes)
+        row = (image, source_id, image_scale, boxes, classes, tf.shape(boxes)[0])
         return row
 
     # batch_size = params['batch_size']
@@ -137,21 +137,19 @@ class InputReader(object):
     dataset = dataset.apply(
         tf.contrib.data.parallel_interleave(
             prefetch_dataset, cycle_length=1, sloppy=True))
-    # dataset = dataset.shuffle(buffer_size=3072)
+    dataset = dataset.shuffle(buffer_size=2048)
 
     dataset = dataset.map(_dataset_parser, num_parallel_calls=12)
-    dataset = dataset.prefetch(32)
+    dataset = dataset.prefetch(128)
     dataset = dataset.apply(
-        tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None, None, 3],
-                                                                     [], [],
-                                                                     [None, 4],
-                                                                     [None, 1])))
-    dataset = dataset.prefetch(2)
+        tf.contrib.data.padded_batch_and_drop_remainder(batch_size,
+                                                        ([None, None, 3], [], [], [None, 4], [None, 1], [])))
+    dataset = dataset.prefetch(4)
 
     # (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
     #  image_scales) = dataset.make_one_shot_iterator().get_next()
     iter = dataset.make_one_shot_iterator()
-    (images, source_ids, image_scales, gt_boxes, gt_classes) = iter.get_next()
+    (images, source_ids, image_scales, gt_boxes, gt_classes, boxes_nums) = iter.get_next()
 
     feature_map_spatial_dims = self._get_feature_map_spatial_dims(tf.unstack(images))
 
@@ -164,79 +162,74 @@ class InputReader(object):
 
     gt_boxes_batch = tf.unstack(gt_boxes)
     gt_classes_batch = tf.unstack(gt_classes)
+    boxes_num_batch = tf.unstack(boxes_nums)
     gt_weights_batch = [None] * len(gt_classes_batch)
+
     def merge_dict(result, target):
       for level in range(params['min_level'], params['max_level'] + 1):
         if level not in result.keys():
           result[level] = []
         result[level].append(target[level])
 
-    # for gt_boxes, gt_classes, gt_weights in zip(gt_boxes_batch, gt_classes_batch, gt_weights_batch):
-    #   input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-    #                                   params['num_scales'], params['aspect_ratios'],
-    #                                   params['anchor_scale'], feature_map_spatial_dims[0])
-    #   bboxes, anchor_list = input_anchors._generate()
-    # input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-    #                                 params['num_scales'], params['aspect_ratios'],
-    #                                 params['anchor_scale'], feature_map_spatial_dims[0])
-    # bboxes, anchor_list = input_anchors._generate()
-    #   anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
-    #   anchor_labeler.label_anchors(gt_boxes, gt_classes)
-    #
-    #   cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
-    #     = anchor_labeler.label_anchors(gt_boxes, gt_classes)
-    #   merge_dict(cls_targets_dict, cls_targets_single)
-    #   merge_dict(cls_weights_dict, cls_weights_single)
-    #   merge_dict(reg_targets_dict, reg_targets_single)
-    #   merge_dict(reg_weights_dict, reg_weights_single)
-    #   num_positives_list.append(num_positives_single)
-    #
-    # num_positives = tf.stack(num_positives_list)
+    for gt_boxes, gt_classes, boxes_num, gt_weights in zip(gt_boxes_batch, gt_classes_batch, boxes_num_batch, gt_weights_batch):
+      input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+                                      params['num_scales'], params['aspect_ratios'],
+                                      params['anchor_scale'], feature_map_spatial_dims[0])
+      anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
+      boxes_shape = tf.stack([boxes_num, 4])
+      classes_shape = tf.stack([boxes_num, 1])
+      gt_boxes = tf.slice(gt_boxes, tf.zeros_like(boxes_shape), boxes_shape)
+      gt_classes = tf.slice(gt_classes, tf.zeros_like(classes_shape), classes_shape)
+      anchor_labeler.label_anchors(gt_boxes, gt_classes)
+
+      cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
+        = anchor_labeler.label_anchors(gt_boxes, gt_classes)
+      merge_dict(cls_targets_dict, cls_targets_single)
+      merge_dict(cls_weights_dict, cls_weights_single)
+      merge_dict(reg_targets_dict, reg_targets_single)
+      merge_dict(reg_weights_dict, reg_weights_single)
+      num_positives_list.append(num_positives_single)
+
+    num_positives = tf.stack(num_positives_list)
 
     labels = {}
     # count num_positives in a batch
-    # num_positives_batch = tf.reduce_mean(num_positives)
-    # labels['mean_num_positives'] = tf.reshape(
-    #     tf.tile(tf.expand_dims(num_positives_batch, 0), [
-    #         batch_size,
-    #     ]), [batch_size, 1])
-    #
-    #
-    # for level in range(params['min_level'], params['max_level'] + 1):
-    #   labels['cls_targets_%d' % level] = tf.stack(cls_targets_dict[level])
-    #   labels['cls_weights_%d' % level] = tf.stack(cls_weights_dict[level])
-    #   labels['box_targets_%d' % level] = tf.stack(reg_targets_dict[level])
-    #   labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
-    # labels['source_ids'] = source_ids
-    # labels['image_scales'] = image_scales
-    return images, feature_map_spatial_dims[0], gt_boxes
+    num_positives_batch = tf.reduce_mean(num_positives)
+    labels['mean_num_positives'] = tf.reshape(
+        tf.tile(tf.expand_dims(num_positives_batch, 0), [
+            batch_size,
+        ]), [batch_size, 1])
+
+
+    for level in range(params['min_level'], params['max_level'] + 1):
+      labels['cls_targets_%d' % level] = tf.stack(cls_targets_dict[level])
+      labels['cls_weights_%d' % level] = tf.stack(cls_weights_dict[level])
+      labels['box_targets_%d' % level] = tf.stack(reg_targets_dict[level])
+      labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
+    labels['source_ids'] = source_ids
+    labels['image_scales'] = image_scales
+    return images, labels
 
 
 if __name__ == '__main__':
-  reader_fn = InputReader('/Users/li.ke/envs/workspace_python/coco_val.record', 2, True)
+  reader_fn = InputReader('/Users/li.ke/Downloads/coco_val.record', 1, True)
   params = {
     'min_level': 3,
     'max_level': 7,
     'num_scales': 3,
     'aspect_ratios': [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)],
     'anchor_scale': 4,
-    'image_size': 512,
+    'image_size': 800,
     'num_classes': 90,
     'skip_crowd': True,
-    'input_rand_hflip': True,
+    'input_rand_hflip': False,
     'use_bfloat16': False
   }
 
-  images, image_size, gt_boxes = reader_fn(params)
-
-  test_size = [s / 2 for s in image_size]
+  images, labels = reader_fn(params)
 
   sess = tf.InteractiveSession()
   # image_size = [tf.to_float(512), tf.to_float(768)]
-
-  input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-                                  params['num_scales'], params['aspect_ratios'],
-                                  params['anchor_scale'], image_size)
-  for i in range(2):
-    bboxes, anchor_list = input_anchors._generate(sess)
-    print(sess.run([gt_boxes, bboxes.get()]))
+  for i in range(5):
+    result = sess.run(labels)
+    print(result['mean_num_positives'], result['source_ids'])
