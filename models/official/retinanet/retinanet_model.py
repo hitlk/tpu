@@ -448,7 +448,6 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     loss=total_loss,
     train_op=train_op,
     eval_metric_ops=eval_metric_ops,
-    training_hooks=[tf.train.LoggingTensorHook(tf.get_collection('my-collection'), 100)],
     scaffold=scaffold_fn() if scaffold_fn is not None else None
   )
 
