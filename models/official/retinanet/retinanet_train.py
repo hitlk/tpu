@@ -145,7 +145,8 @@ def main(argv):
       allow_soft_placement=True, log_device_placement=False)
   run_config = estimator.RunConfig(
     model_dir=FLAGS.model_dir,
-    session_config=config_proto
+    session_config=config_proto,
+    save_checkpoints_secs=1800
   )
   # if FLAGS.use_xla and not FLAGS.use_tpu:
   #   config_proto.graph_options.optimizer_options.global_jit_level = (

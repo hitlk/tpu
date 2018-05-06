@@ -32,6 +32,7 @@ import anchors
 import coco_metric
 import retinanet_architecture
 from tensorflow import estimator
+from object_detection import shape_utils
 # from tensorflow.contrib.tpu.python.tpu import bfloat16
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_optimizer
@@ -180,8 +181,6 @@ def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0
   box_loss = tf.reduce_sum(box_loss)
   box_loss /= normalizer
 
-  tf.add_to_collection('my-collection', num_positives)
-  tf.add_to_collection('my-collection', box_loss)
   return box_loss
 
 def _detection_loss(cls_outputs, box_outputs, labels, params):
@@ -385,7 +384,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
   # eval_metrics = None
   eval_metric_ops = None
   if mode == tf.estimator.ModeKeys.EVAL:
-
+    features_shape = shape_utils.combined_static_and_dynamic_shape(features)
     def metric_fn(**kwargs):
       """Evaluation metric fn. Performed on CPU, do not reference TPU ops."""
       eval_anchors = anchors.Anchors(params['min_level'],
@@ -393,7 +392,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
                                      params['num_scales'],
                                      params['aspect_ratios'],
                                      params['anchor_scale'],
-                                     params['image_size'])
+                                     features_shape[1:3])
       anchor_labeler = anchors.AnchorLabeler(eval_anchors,
                                              params['num_classes'])
       cls_loss = tf.metrics.mean(kwargs['cls_loss_repeat'])
@@ -430,7 +429,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
         'cls_loss_repeat': cls_loss_repeat,
         'box_loss_repeat': box_loss_repeat,
         'source_ids': labels['source_ids'],
-        'image_scales': labels['image_scales'],
+        'image_scales': labels['image_scales']
     }
     for level in range(params['min_level'], params['max_level'] + 1):
       metric_fn_inputs['cls_outputs_%d' % level] = cls_outputs[level]
@@ -449,7 +448,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     loss=total_loss,
     train_op=train_op,
     eval_metric_ops=eval_metric_ops,
-    training_hooks=[tf.train.LoggingTensorHook(tf.get_collection('my-collection'), 1)],
+    training_hooks=[tf.train.LoggingTensorHook(tf.get_collection('my-collection'), 100)],
     scaffold=scaffold_fn() if scaffold_fn is not None else None
   )
 

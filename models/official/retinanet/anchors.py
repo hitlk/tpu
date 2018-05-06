@@ -504,5 +504,5 @@ class AnchorLabeler(object):
     box_outputs_all = tf.concat(box_outputs_all, 0)
     return tf.py_func(
         _generate_detections,
-        [cls_outputs_all, box_outputs_all, self._anchors.boxes, image_id],
+        [cls_outputs_all, box_outputs_all, self._anchors.boxes.get(), image_id],
         tf.float32)

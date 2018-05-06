@@ -184,10 +184,12 @@ class InputReader(object):
 
       cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
         = anchor_labeler.label_anchors(gt_boxes, gt_classes)
+
       merge_dict(cls_targets_dict, cls_targets_single)
       merge_dict(cls_weights_dict, cls_weights_single)
       merge_dict(reg_targets_dict, reg_targets_single)
       merge_dict(reg_weights_dict, reg_weights_single)
+
       num_positives_list.append(num_positives_single)
 
     num_positives = tf.stack(num_positives_list)
