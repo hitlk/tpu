@@ -255,7 +255,8 @@ def tile_anchors(grid_height,
                  aspect_ratios,
                  base_anchor_size,
                  anchor_stride,
-                 anchor_offset):
+                 anchor_offset,
+                 sess):
   """Create a tiled set of anchors strided along a grid in image space.
 
   This op creates a set of anchor boxes by placing a "basis" collection of
@@ -291,9 +292,8 @@ def tile_anchors(grid_height,
     a BoxList holding a collection of N anchor boxes
   """
   ratio_sqrts = tf.sqrt(aspect_ratios)
-  heights = scales / ratio_sqrts * base_anchor_size[0]
-  widths = scales * ratio_sqrts * base_anchor_size[1]
-
+  heights = 2**scales / ratio_sqrts * base_anchor_size[0]
+  widths = 2**scales * ratio_sqrts * base_anchor_size[1]
   # Get a grid of box centers
   y_centers = tf.to_float(tf.range(grid_height))
   y_centers = y_centers * anchor_stride[0] + anchor_offset[0]
@@ -308,7 +308,6 @@ def tile_anchors(grid_height,
   bbox_centers = tf.reshape(bbox_centers, [-1, 2])
   bbox_sizes = tf.reshape(bbox_sizes, [-1, 2])
   bbox_corners = _center_size_bbox_to_corners_bbox(bbox_centers, bbox_sizes)
-  print(tf.shape(bbox_corners).eval())
   return box_list.BoxList(bbox_corners)
 
 def _center_size_bbox_to_corners_bbox(centers, sizes):
@@ -367,9 +366,8 @@ class Anchors(object):
     boxes = tf.convert_to_tensor(boxes, dtype=tf.float32)
     return boxes
 
-  def _generate(self):
+  def _generate(self, sess):
     im_height, im_width = self.image_size
-    print(im_height, im_width)
     aspect_ratios = [w / h for (h, w) in self.aspect_ratios]
     num_scales = self.num_scales
     scales = [scale_octave / float(num_scales) for scale_octave in range(num_scales)]
@@ -379,7 +377,6 @@ class Anchors(object):
       stride = 2**level
       grid_height = im_height / stride
       grid_width = im_width / stride
-      print(grid_height.eval(), grid_width.eval())
       base_anchor_size = [self.anchor_scale * stride, self.anchor_scale * stride]
       anchor_stride = [stride, stride]
       anchor_offset = [stride / 2, stride / 2]
@@ -394,7 +391,8 @@ class Anchors(object):
                              aspect_ratios_grid,
                              base_anchor_size,
                              anchor_stride,
-                             anchor_offset)
+                             anchor_offset,
+                             sess)
       anchors_list.append(anchors)
 
     return box_list_ops.concatenate(anchors_list), anchors_list

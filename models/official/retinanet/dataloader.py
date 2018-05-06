@@ -137,20 +137,21 @@ class InputReader(object):
     dataset = dataset.apply(
         tf.contrib.data.parallel_interleave(
             prefetch_dataset, cycle_length=1, sloppy=True))
-    dataset = dataset.shuffle(buffer_size=3072)
+    # dataset = dataset.shuffle(buffer_size=3072)
 
     dataset = dataset.map(_dataset_parser, num_parallel_calls=12)
     dataset = dataset.prefetch(32)
     dataset = dataset.apply(
         tf.contrib.data.padded_batch_and_drop_remainder(batch_size, ([None, None, 3],
                                                                      [], [],
-                                                                     [None, None],
-                                                                     [None, None])))
+                                                                     [None, 4],
+                                                                     [None, 1])))
     dataset = dataset.prefetch(2)
 
     # (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
     #  image_scales) = dataset.make_one_shot_iterator().get_next()
-    (images, source_ids, image_scales, gt_boxes, gt_classes) = dataset.make_one_shot_iterator().get_next()
+    iter = dataset.make_one_shot_iterator()
+    (images, source_ids, image_scales, gt_boxes, gt_classes) = iter.get_next()
 
     feature_map_spatial_dims = self._get_feature_map_spatial_dims(tf.unstack(images))
 
@@ -208,14 +209,14 @@ class InputReader(object):
     #   labels['box_weights_%d' % level] = tf.stack(reg_weights_dict[level])
     # labels['source_ids'] = source_ids
     # labels['image_scales'] = image_scales
-    return images, feature_map_spatial_dims[0]
+    return images, feature_map_spatial_dims[0], gt_boxes
 
 
 if __name__ == '__main__':
-  reader_fn = InputReader('/data/coco/coco_train.record', 1, True)
+  reader_fn = InputReader('/Users/li.ke/envs/workspace_python/coco_val.record', 2, True)
   params = {
     'min_level': 3,
-    'max_level': 3,
+    'max_level': 7,
     'num_scales': 3,
     'aspect_ratios': [(1.0, 1.0), (1.4, 0.7), (0.7, 1.4)],
     'anchor_scale': 4,
@@ -226,12 +227,16 @@ if __name__ == '__main__':
     'use_bfloat16': False
   }
 
-  images, image_size = reader_fn(params)
+  images, image_size, gt_boxes = reader_fn(params)
+
+  test_size = [s / 2 for s in image_size]
 
   sess = tf.InteractiveSession()
+  # image_size = [tf.to_float(512), tf.to_float(768)]
 
   input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
                                   params['num_scales'], params['aspect_ratios'],
                                   params['anchor_scale'], image_size)
-  for i in range(5):
-    bboxes, anchor_list = input_anchors._generate()
+  for i in range(2):
+    bboxes, anchor_list = input_anchors._generate(sess)
+    print(sess.run([gt_boxes, bboxes.get()]))
