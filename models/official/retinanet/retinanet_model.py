@@ -222,6 +222,8 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
         labels['cls_targets_%d' % level],
         params['num_classes'])
       bs, _, _, _ = cls_targets_at_level.get_shape().as_list()
+      cls_targets_at_level = tf.reshape(cls_targets_at_level,
+                                        [bs, -1, params['num_classes']])
       cls_outputs_at_level = cls_outputs[level]
       cls_outputs_at_level = tf.reshape(cls_outputs_at_level,
                                         [bs, -1, params['num_classes']])
