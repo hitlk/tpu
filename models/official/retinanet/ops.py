@@ -25,3 +25,20 @@ def group_norm(x, G=32, esp=1e-5, name=None):
     output = tf.transpose(output, [0, 2, 3, 1])
 
     return output
+
+def affine_channel(x, name=None):
+  """Affine Transformation."""
+  with tf.variable_scope(name, 'affine_channel', values=[x]):
+    x = tf.transpose(x, [0, 3, 1, 2])
+    combined_shape = shape_utils.combined_static_and_dynamic_shape(x)
+    N, C, H, W = combined_shape
+    scale = tf.get_variable('scale', [C], initializer=tf.constant_initializer(1.0))
+    bias = tf.get_variable('bias', [C], initializer=tf.constant_initializer(0.0))
+
+    scale = tf.reshape[scale, [1, C, 1, 1]]
+    bias = tf.reshape(bias, [1, C, 1, 1])
+
+    output = x * scale + bias
+    output = tf.transpose(output, [0, 2 , 3, 1])
+
+    return output

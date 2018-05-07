@@ -110,6 +110,20 @@ def group_norm_relu(inputs,
     inputs = tf.nn.relu(inputs)
   return inputs
 
+def affine_transformation_relu(inputs,
+                               is_traning_bn,
+                               relu=True,
+                               init_zero=False,
+                               data_format='channels_last',
+                               name=None):
+  """Performs a affine transformation to replace BN in networks when BN can not be used."""
+  inputs = ops.affine_channel(inputs, name=name)
+
+  if relu:
+    inputs = tf.nn.relu(inputs)
+
+  return inputs
+
 def fixed_padding(inputs, kernel_size, data_format='channels_last'):
   """Pads the input along the spatial dimensions independently of input size.
 
@@ -259,7 +273,7 @@ def bottleneck_block(inputs,
   Returns:
     The output `Tensor` of the block.
   """
-  norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+  norm_relu_fn = batch_norm_relu if is_training_bn else affine_transformation_relu
   shortcut = inputs
   if use_projection:
     # Projection shortcut only in first block within a group. Bottleneck blocks
@@ -369,7 +383,7 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
   """
   def model(inputs, is_training_bn=False):
     """Creation of the model graph."""
-    norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+    norm_relu_fn = batch_norm_relu if is_training_bn else affine_transformation_relu
     inputs = conv2d_fixed_padding(
         inputs=inputs,
         filters=64,
@@ -474,7 +488,7 @@ def nearest_upsampling(data, scale):
 ## RetinaNet specific layers
 def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False):
   """Class prediction network for RetinaNet."""
-  norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+  # norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
   for i in range(4):
     images = tf.layers.conv2d(
         images,
@@ -489,8 +503,9 @@ def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False):
     # The convolution layers in the class net are shared among all levels, but
     # each level has its batch normlization to capture the statistical
     # difference among different levels.
-    images = norm_relu_fn(images, is_training_bn, relu=True, init_zero=False,
-                             name='class-%d-bn-%d' % (i, level))
+    # images = norm_relu_fn(images, is_training_bn, relu=True, init_zero=False,
+    #                          name='class-%d-bn-%d' % (i, level))
+    images = tf.nn.relu(images)
 
   classes = tf.layers.conv2d(
       images,
@@ -507,7 +522,7 @@ def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False):
 
 def box_net(images, level, num_anchors=6, is_training_bn=False):
   """Box regression network for RetinaNet."""
-  norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+  # norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
   for i in range(4):
     images = tf.layers.conv2d(
         images,
@@ -522,8 +537,9 @@ def box_net(images, level, num_anchors=6, is_training_bn=False):
     # The convolution layers in the box net are shared among all levels, but
     # each level has its batch normlization to capture the statistical
     # difference among different levels.
-    images = norm_relu_fn(images, is_training_bn, relu=True, init_zero=False,
-                             name='box-%d-bn-%d' % (i, level))
+    # images = norm_relu_fn(images, is_training_bn, relu=True, init_zero=False,
+    #                          name='box-%d-bn-%d' % (i, level))
+    images = tf.nn.relu(images)
 
   boxes = tf.layers.conv2d(
       images,
