@@ -35,7 +35,7 @@ def affine_channel(x, name=None):
     scale = tf.get_variable('scale', [C], initializer=tf.constant_initializer(1.0))
     bias = tf.get_variable('bias', [C], initializer=tf.constant_initializer(0.0))
 
-    scale = tf.reshape[scale, [1, C, 1, 1]]
+    scale = tf.reshape(scale, [1, C, 1, 1])
     bias = tf.reshape(bias, [1, C, 1, 1])
 
     output = x * scale + bias
