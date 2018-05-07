@@ -238,7 +238,6 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
     cls_weights_at_level = labels['cls_weights_%d' % level]
     cls_weights_at_level = tf.reshape(cls_weights_at_level,
                                       [bs, -1])
-    tf.summary.scalar('cls_weights_%d' % level, tf.reduce_sum(cls_weights_at_level))
     cls_losses.append(
       _cls_loss(
         cls_outputs_at_level,
@@ -255,7 +254,6 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
     box_weights_at_level = labels['box_weights_%d' % level]
     box_weights_at_level = tf.reshape(box_weights_at_level,
                                       [bs, -1])
-    tf.summary.scalar('box_weight_%d' % level, tf.reduce_sum(box_weights_at_level))
     box_losses.append(
         _bbox_loss(
           box_outputs_at_level,
