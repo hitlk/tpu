@@ -56,14 +56,6 @@ class InputReader(object):
     self._is_training = is_training
     self._batch_size = batch_size
 
-  def _get_feature_map_spatial_dims(self, feature_maps):
-    feature_map_shapes = [
-      shape_utils.combined_static_and_dynamic_shape(
-        feature_map) for feature_map in feature_maps
-    ]
-
-    return [(shape[0], shape[1]) for shape in feature_map_shapes]
-
   def __call__(self, params):
     # input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
     #                                 params['num_scales'],
@@ -151,7 +143,7 @@ class InputReader(object):
     iter = dataset.make_one_shot_iterator()
     (images, source_ids, image_scales, gt_boxes, gt_classes, boxes_nums) = iter.get_next()
 
-    feature_map_spatial_dims = self._get_feature_map_spatial_dims(tf.unstack(images))
+    feature_map_spatial_dims = shape_utils.combined_static_and_dynamic_shape(images)
 
     cls_targets_dict = {}
     cls_weights_dict = {}
@@ -171,11 +163,12 @@ class InputReader(object):
           result[level] = []
         result[level].append(target[level])
 
+    input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
+                                    params['num_scales'], params['aspect_ratios'],
+                                    params['anchor_scale'], feature_map_spatial_dims[1:3])
+    anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
+
     for gt_boxes, gt_classes, boxes_num, gt_weights in zip(gt_boxes_batch, gt_classes_batch, boxes_num_batch, gt_weights_batch):
-      input_anchors = anchors.Anchors(params['min_level'], params['max_level'],
-                                      params['num_scales'], params['aspect_ratios'],
-                                      params['anchor_scale'], feature_map_spatial_dims[0])
-      anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
       boxes_shape = tf.stack([boxes_num, 4])
       classes_shape = tf.stack([boxes_num, 1])
       gt_boxes = tf.slice(gt_boxes, tf.zeros_like(boxes_shape), boxes_shape)

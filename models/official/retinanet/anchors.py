@@ -368,34 +368,35 @@ class Anchors(object):
     return boxes
 
   def _generate_anchors(self):
-    im_height, im_width = self.image_size
-    aspect_ratios = [w / h for (h, w) in self.aspect_ratios]
-    num_scales = self.num_scales
-    scales = [scale_octave / float(num_scales) for scale_octave in range(num_scales)]
+    with tf.name_scope('GridAnchorGenerator', values=self.image_size):
+      im_height, im_width = self.image_size
+      aspect_ratios = [w / h for (h, w) in self.aspect_ratios]
+      num_scales = self.num_scales
+      scales = [scale_octave / float(num_scales) for scale_octave in range(num_scales)]
 
-    anchors_list = []
-    for level in range(self.min_level, self.max_level + 1):
-      stride = 2**level
-      grid_height = im_height / stride
-      grid_width = im_width / stride
-      base_anchor_size = [self.anchor_scale * stride, self.anchor_scale * stride]
-      anchor_stride = [stride, stride]
-      anchor_offset = [stride / 2, stride / 2]
+      anchors_list = []
+      for level in range(self.min_level, self.max_level + 1):
+        stride = 2 ** level
+        grid_height = im_height / stride
+        grid_width = im_width / stride
+        base_anchor_size = [self.anchor_scale * stride, self.anchor_scale * stride]
+        anchor_stride = [stride, stride]
+        anchor_offset = [stride / 2, stride / 2]
 
-      scales_grid, aspect_ratios_grid = ops.meshgrid(scales,
-                                                     aspect_ratios)
-      scales_grid = tf.reshape(scales_grid, [-1])
-      aspect_ratios_grid = tf.reshape(aspect_ratios_grid, [-1])
-      anchors = tile_anchors(grid_height,
-                             grid_width,
-                             scales_grid,
-                             aspect_ratios_grid,
-                             base_anchor_size,
-                             anchor_stride,
-                             anchor_offset)
-      anchors_list.append(anchors)
+        scales_grid, aspect_ratios_grid = ops.meshgrid(scales,
+                                                       aspect_ratios)
+        scales_grid = tf.reshape(scales_grid, [-1])
+        aspect_ratios_grid = tf.reshape(aspect_ratios_grid, [-1])
+        anchors = tile_anchors(grid_height,
+                               grid_width,
+                               scales_grid,
+                               aspect_ratios_grid,
+                               base_anchor_size,
+                               anchor_stride,
+                               anchor_offset)
+        anchors_list.append(anchors)
 
-    return box_list_ops.concatenate(anchors_list)
+      return box_list_ops.concatenate(anchors_list)
 
   def get_anchors_per_location(self):
     return self.num_scales * len(self.aspect_ratios)
