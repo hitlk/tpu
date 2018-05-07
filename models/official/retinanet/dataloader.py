@@ -173,7 +173,6 @@ class InputReader(object):
       classes_shape = tf.stack([boxes_num, 1])
       gt_boxes = tf.slice(gt_boxes, tf.zeros_like(boxes_shape), boxes_shape)
       gt_classes = tf.slice(gt_classes, tf.zeros_like(classes_shape), classes_shape)
-      anchor_labeler.label_anchors(gt_boxes, gt_classes)
 
       cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
         = anchor_labeler.label_anchors(gt_boxes, gt_classes)

@@ -352,20 +352,21 @@ class Anchors(object):
     self.aspect_ratios = aspect_ratios
     self.anchor_scale = anchor_scale
     self.image_size = image_size
-    self.config = self._generate_configs()
+    # self.config = self._generate_configs()
     # self.boxes = self._generate_boxes()
+    self.grid_shapes = OrderedDict()
     self.boxes = self._generate_anchors()
-  def _generate_configs(self):
-    """Generate configurations of anchor boxes."""
-    return _generate_anchor_configs(self.min_level, self.max_level,
-                                    self.num_scales, self.aspect_ratios)
+  # def _generate_configs(self):
+  #   """Generate configurations of anchor boxes."""
+  #   return _generate_anchor_configs(self.min_level, self.max_level,
+  #                                   self.num_scales, self.aspect_ratios)
 
-  def _generate_boxes(self):
-    """Generates multiscale anchor boxes."""
-    boxes = _generate_anchor_boxes(self.image_size, self.anchor_scale,
-                                   self.config)
-    boxes = tf.convert_to_tensor(boxes, dtype=tf.float32)
-    return boxes
+  # def _generate_boxes(self):
+  #   """Generates multiscale anchor boxes."""
+  #   boxes = _generate_anchor_boxes(self.image_size, self.anchor_scale,
+  #                                  self.config)
+  #   boxes = tf.convert_to_tensor(boxes, dtype=tf.float32)
+  #   return boxes
 
   def _generate_anchors(self):
     with tf.name_scope('GridAnchorGenerator', values=self.image_size):
@@ -377,8 +378,9 @@ class Anchors(object):
       anchors_list = []
       for level in range(self.min_level, self.max_level + 1):
         stride = 2 ** level
-        grid_height = im_height / stride
-        grid_width = im_width / stride
+        grid_height = tf.floor(im_height / stride)
+        grid_width = tf.floor(im_width / stride)
+        self.grid_shapes[level] = [grid_height, grid_width]
         base_anchor_size = [self.anchor_scale * stride, self.anchor_scale * stride]
         anchor_stride = [stride, stride]
         anchor_offset = [stride / 2, stride / 2]
@@ -428,25 +430,27 @@ class AnchorLabeler(object):
     self._match_threshold = match_threshold
     self._num_classes = num_classes
 
-  def _unpack_labels(self, labels):
+  def _unpack_labels(self, labels_dict):
     """Unpacks an array of labels into multiscales labels."""
-    labels_unpacked = OrderedDict()
+    result_dict = {}
     anchors = self._anchors
+    grid_shapes = anchors.grid_shapes
     count = tf.convert_to_tensor(0, dtype=tf.int32)
     for level in range(anchors.min_level, anchors.max_level + 1):
-      # feat_size = int(anchors.image_size / 2**level)
-      grid_height, grid_width = anchors.image_size
-      grid_height = tf.floor(grid_height / 2**level)
-      grid_width = tf.floor(grid_width / 2**level)
+      grid_height, grid_width = grid_shapes[level]
+      grid_height = tf.cast(grid_height, tf.int32)
+      grid_width = tf.cast(grid_width, tf.int32)
       steps = (grid_height * grid_width) * anchors.get_anchors_per_location()
-      steps = tf.cast(steps, tf.int32)
       indices = tf.range(count, count + steps)
-      tf.assert_greater_equal(anchors.boxes.num_boxes(), count + steps, message='anchor box number less than indices')
-      tf.assert_greater_equal(tf.shape(labels)[0], count + steps, message='label less than indices')
-      labels_unpacked[level] = tf.reshape(
-          tf.gather(labels, indices), tf.stack([tf.cast(grid_height, tf.int32), tf.cast(grid_width, tf.int32), -1]))
+
+      for key, labels in labels_dict.items():
+        if key not in result_dict:
+          result_dict[key] = OrderedDict()
+        labels_unpacked = result_dict[key]
+        labels_unpacked[level] = tf.reshape(tf.gather(labels, indices),
+                                            [grid_height, grid_width, -1])
       count = count + steps
-    return labels_unpacked
+    return result_dict
 
   def label_anchors(self, gt_boxes, gt_labels):
     """Labels anchors with ground truth inputs.
@@ -484,15 +488,17 @@ class AnchorLabeler(object):
       tf.assert_equal(tf.shape(cls_weights)[0], tf.shape(box_weights)[0])
 
       # Unpack labels.
-      cls_targets_dict = self._unpack_labels(cls_targets)
-      cls_weights_dict = self._unpack_labels(cls_weights)
-      box_targets_dict = self._unpack_labels(box_targets)
-      box_weights_dict = self._unpack_labels(box_weights)
+      labels_dict = dict({'cls_targets': cls_targets,
+                          'cls_weights': cls_weights,
+                          'box_targets': box_targets,
+                          'box_weights': box_weights})
+      result_dict = self._unpack_labels(labels_dict)
 
       num_positives = tf.reduce_sum(
         tf.cast(tf.greater(matches.match_results, -1), tf.float32))
 
-      return cls_targets_dict, cls_weights_dict, box_targets_dict, box_weights_dict, \
+      return result_dict['cls_targets'], result_dict['cls_weights'], \
+             result_dict['box_targets'], result_dict['box_weights'], \
              num_positives
 
   def generate_detections(self, cls_ouputs, box_outputs, image_id):
