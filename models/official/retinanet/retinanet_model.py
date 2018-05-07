@@ -204,7 +204,7 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
     cls_loss: an integar tensor representing total class loss.
     box_loss: an integar tensor representing total box regression loss.
   """
-  with tf.name_scope('RetinaNet Loss', values=[cls_outputs, box_outputs, labels]):
+  with tf.name_scope('RetinaNetLoss', values=[cls_outputs, box_outputs, labels]):
     # Sum all positives in a batch for normalization and avoid zero
     # num_positives_sum, which would lead to inf loss during training
     num_positives_sum = tf.reduce_sum(labels['mean_num_positives']) + 1.0
