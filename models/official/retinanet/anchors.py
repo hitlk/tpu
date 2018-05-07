@@ -447,8 +447,7 @@ class AnchorLabeler(object):
         if key not in result_dict:
           result_dict[key] = OrderedDict()
         labels_unpacked = result_dict[key]
-        labels_unpacked[level] = tf.reshape(tf.gather(labels, indices),
-                                            [grid_height, grid_width, -1])
+        labels_unpacked[level] = tf.gather(labels, indices)
       count = count + steps
     return result_dict
 

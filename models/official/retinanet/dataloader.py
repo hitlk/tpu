@@ -102,14 +102,10 @@ class InputReader(object):
         new_size = tf.cast(new_size, tf.int32)
         image = tf.image.pad_to_bounding_box(image, 0, 0, new_size[0],
                                              new_size[1])
-        # (cls_targets, cls_weights, box_targets, box_weights,
-        #  num_positives, num_negatives, num_ignored) = anchor_labeler.label_anchors(boxes, classes)
 
         source_id = tf.string_to_number(source_id, out_type=tf.float32)
         if params['use_bfloat16']:
           image = tf.cast(image, dtype=tf.bfloat16)
-        # row = (image, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored,
-        #        source_id, image_scale)
         row = (image, source_id, image_scale, boxes, classes, tf.shape(boxes)[0])
         return row
 
@@ -138,8 +134,6 @@ class InputReader(object):
                                                         ([None, None, 3], [], [], [None, 4], [None, 1], [])))
     dataset = dataset.prefetch(4)
 
-    # (images, cls_targets, cls_weights, box_targets, box_weights, num_positives, num_negatives, num_ignored, source_ids,
-    #  image_scales) = dataset.make_one_shot_iterator().get_next()
     iter = dataset.make_one_shot_iterator()
     (images, source_ids, image_scales, gt_boxes, gt_classes, boxes_nums) = iter.get_next()
 
@@ -168,11 +162,10 @@ class InputReader(object):
                                     params['anchor_scale'], feature_map_spatial_dims[1:3])
     anchor_labeler = anchors.AnchorLabeler(input_anchors, params['num_classes'])
 
-    for gt_boxes, gt_classes, boxes_num, gt_weights in zip(gt_boxes_batch, gt_classes_batch, boxes_num_batch, gt_weights_batch):
-      boxes_shape = tf.stack([boxes_num, 4])
-      classes_shape = tf.stack([boxes_num, 1])
-      gt_boxes = tf.slice(gt_boxes, tf.zeros_like(boxes_shape), boxes_shape)
-      gt_classes = tf.slice(gt_classes, tf.zeros_like(classes_shape), classes_shape)
+    for gt_boxes, gt_classes, boxes_num, gt_weights in \
+        zip(gt_boxes_batch, gt_classes_batch, boxes_num_batch, gt_weights_batch):
+      gt_boxes = tf.slice(gt_boxes, [0, 0], [boxes_num, 4])
+      gt_classes = tf.slice(gt_classes, [0, 0], [boxes_num, 1])
 
       cls_targets_single, cls_weights_single, reg_targets_single, reg_weights_single, num_positives_single \
         = anchor_labeler.label_anchors(gt_boxes, gt_classes)

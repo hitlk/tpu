@@ -221,24 +221,11 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
       cls_targets_at_level = tf.one_hot(
         labels['cls_targets_%d' % level],
         params['num_classes'])
-      bs, width, height, _, _ = cls_targets_at_level.get_shape().as_list()
-      # cls_targets_at_level = tf.reshape(cls_targets_at_level,
-      #                                    [bs, width, height, -1])
-      # cls_losses.append(
-      #     _classification_loss(
-      #         cls_outputs[level],
-      #         cls_targets_at_level,
-      #         num_positives_sum,
-      #         alpha=params['alpha'],
-      #         gamma=params['gamma']))
-      cls_targets_at_level = tf.reshape(cls_targets_at_level,
-                                        [bs, -1, params['num_classes']])
+      bs, _, _ = cls_targets_at_level.get_shape().as_list()
       cls_outputs_at_level = cls_outputs[level]
       cls_outputs_at_level = tf.reshape(cls_outputs_at_level,
                                         [bs, -1, params['num_classes']])
       cls_weights_at_level = labels['cls_weights_%d' % level]
-      cls_weights_at_level = tf.reshape(cls_weights_at_level,
-                                        [bs, -1])
       cls_losses.append(
         _cls_loss(
           cls_outputs_at_level,
@@ -247,14 +234,10 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
           num_positives_sum))
 
       box_targets_at_level = labels['box_targets_%d' % level]
-      box_targets_at_level = tf.reshape(box_targets_at_level,
-                                        [bs, -1, 4])
       box_outputs_at_level = box_outputs[level]
       box_outputs_at_level = tf.reshape(box_outputs_at_level,
                                         [bs, -1, 4])
       box_weights_at_level = labels['box_weights_%d' % level]
-      box_weights_at_level = tf.reshape(box_weights_at_level,
-                                        [bs, -1])
       box_losses.append(
         _bbox_loss(
           box_outputs_at_level,
