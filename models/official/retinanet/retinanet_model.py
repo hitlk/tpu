@@ -434,6 +434,7 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     loss=total_loss,
     train_op=train_op,
     eval_metric_ops=eval_metric_ops,
+    training_hooks=[tf.train.ProfilerHook(save_steps=100, show_memory=True)],
     scaffold=scaffold_fn() if scaffold_fn is not None else None
   )
 
