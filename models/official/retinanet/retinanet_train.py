@@ -179,7 +179,8 @@ def main(argv):
                                         FLAGS.train_batch_size,
                                         is_training=True,),
         max_steps=int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
-                      FLAGS.train_batch_size))
+                      FLAGS.train_batch_size),
+        hooks=[tf.train.ProfilerHook(save_secs=7200, output_dir=FLAGS.model_dir, show_memory=True)])
 
     if FLAGS.eval_after_training:
       # Run evaluation after training finishes.
