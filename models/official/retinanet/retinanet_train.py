@@ -174,13 +174,24 @@ def main(argv):
     #     train_batch_size=FLAGS.train_batch_size,
     #     config=run_config,
     #     params=params)
-    train_estimator.train(
-        input_fn=dataloader.InputReader(FLAGS.training_file_pattern,
-                                        FLAGS.train_batch_size,
-                                        is_training=True,),
-        max_steps=int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
-                      FLAGS.train_batch_size),
-        hooks=[tf.train.ProfilerHook(save_secs=7200, output_dir=FLAGS.model_dir, show_memory=True)])
+    # train_estimator.train(
+    #     input_fn=dataloader.InputReader(FLAGS.training_file_pattern,
+    #                                     FLAGS.train_batch_size,
+    #                                     is_training=True,),
+    #     max_steps=int((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
+    #                   FLAGS.train_batch_size),
+    #     hooks=[tf.train.ProfilerHook(save_secs=7200, output_dir=FLAGS.model_dir, show_memory=True)])
+    train_spec = tf.estimator.TrainSpec(input_fn=dataloader.InputReader(FLAGS.training_file_pattern,
+                                                                        FLAGS.train_batch_size,
+                                                                        is_training=True),
+                                        max_steps=((FLAGS.num_epochs * FLAGS.num_examples_per_epoch) /
+                                                    FLAGS.train_batch_size))
+    eval_spec = tf.estimator.EvalSpec(input_fn=dataloader.InputReader(FLAGS.validation_file_pattern,
+                                                                      1,
+                                                                      is_training=False),
+                                      steps=FLAGS.eval_steps,
+                                      start_delay_secs=360000)
+    tf.estimator.train_and_evaluate(train_estimator, train_spec, eval_spec)
 
     if FLAGS.eval_after_training:
       # Run evaluation after training finishes.

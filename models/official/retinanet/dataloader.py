@@ -76,7 +76,7 @@ class InputReader(object):
         classes = tf.reshape(tf.cast(classes, dtype=tf.float32), [-1, 1])
         # Handle crowd annotations. As crowd annotations are not large
         # instances, the model ignores them in training.
-        if params['skip_crowd']:
+        if self._is_training and params['skip_crowd']:
           indices = tf.where(tf.logical_not(data['groundtruth_is_crowd']))
           classes = tf.gather_nd(classes, indices)
           boxes = tf.gather_nd(boxes, indices)
@@ -85,7 +85,7 @@ class InputReader(object):
         image = tf.image.convert_image_dtype(image, dtype=tf.float32)
         image = _normalize_image(image)
 
-        if params['input_rand_hflip']:
+        if self._is_training and params['input_rand_hflip']:
           image, boxes = preprocessor.random_horizontal_flip(image, boxes=boxes)
         image_original_shape = tf.shape(image)
         max_size = params['image_size'] * _ASPECT_RATIO
