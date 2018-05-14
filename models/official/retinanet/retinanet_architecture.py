@@ -259,7 +259,7 @@ def bottleneck_block(inputs,
   Returns:
     The output `Tensor` of the block.
   """
-  norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+  norm_relu_fn = batch_norm_relu
   shortcut = inputs
   if use_projection:
     # Projection shortcut only in first block within a group. Bottleneck blocks
@@ -369,7 +369,7 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
   """
   def model(inputs, is_training_bn=False):
     """Creation of the model graph."""
-    norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+    norm_relu_fn = batch_norm_relu
     inputs = conv2d_fixed_padding(
         inputs=inputs,
         filters=64,
@@ -469,7 +469,7 @@ def nearest_upsampling(data, scale):
 ## RetinaNet specific layers
 def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False):
   """Class prediction network for RetinaNet."""
-  norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+  norm_relu_fn = batch_norm_relu
   for i in range(4):
     images = tf.layers.conv2d(
         images,
@@ -502,7 +502,7 @@ def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False):
 
 def box_net(images, level, num_anchors=6, is_training_bn=False):
   """Box regression network for RetinaNet."""
-  norm_relu_fn = batch_norm_relu if is_training_bn else group_norm_relu
+  norm_relu_fn = batch_norm_relu
   for i in range(4):
     images = tf.layers.conv2d(
         images,
