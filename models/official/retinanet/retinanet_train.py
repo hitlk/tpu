@@ -101,6 +101,7 @@ FLAGS = flags.FLAGS
 
 
 def main(argv):
+  FLAGS(argv)
   del argv  # Unused.
 
   # Check flag values
