@@ -288,7 +288,8 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
         num_classes=params['num_classes'],
         num_anchors=len(params['aspect_ratios'] * params['num_scales']),
         resnet_depth=params['resnet_depth'],
-        is_training_bn=params['is_training_bn'])
+        is_training_bn=params['is_training_bn'],
+        bn_trainable=params['bn_trainable'])
 
   # if params['use_bfloat16']:
   #   with bfloat16.bfloat16_scope():
@@ -465,6 +466,7 @@ def default_hparams():
       resnet_depth=50,
       # is batchnorm training mode
       is_training_bn=True,
+      bn_trainable=False,
       # optimization
       momentum=0.9,
       learning_rate=0.08,
