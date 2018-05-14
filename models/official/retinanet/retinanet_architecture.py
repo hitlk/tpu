@@ -593,18 +593,15 @@ def resnet_fpn(features,
           name='p%d' % level)
     # add batchnorm
     for level in range(min_level, max_level + 1):
-      if is_training_bn:
-        feats[level] = tf.layers.batch_normalization(
-          inputs=feats[level],
-          momentum=_BATCH_NORM_DECAY,
-          epsilon=_BATCH_NORM_EPSILON,
-          center=True,
-          scale=True,
-          training=is_training_bn,
-          fused=True,
-          name='p%d-bn' % level)
-      else:
-        feats[level] = ops.group_norm(feats[level], name='p%d-bn' % level)
+      feats[level] = tf.layers.batch_normalization(
+        inputs=feats[level],
+        momentum=_BATCH_NORM_DECAY,
+        epsilon=_BATCH_NORM_EPSILON,
+        center=True,
+        scale=True,
+        training=is_training_bn,
+        fused=True,
+        name='p%d-bn' % level)
 
   return feats
 
