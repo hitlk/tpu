@@ -180,8 +180,6 @@ def _bbox_loss(prediction_tensor, target_tensor, weights, num_positives, delta=0
   box_loss = tf.reduce_sum(box_loss)
   box_loss /= normalizer
 
-  tf.add_to_collection('my-collection', num_positives)
-  tf.add_to_collection('my-collection', box_loss)
   return box_loss
 
 def _detection_loss(cls_outputs, box_outputs, labels, params):
@@ -453,7 +451,6 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
     loss=total_loss,
     train_op=train_op,
     eval_metric_ops=eval_metric_ops,
-    training_hooks=[tf.train.LoggingTensorHook(tf.get_collection('my-collection'), 5)],
     scaffold=scaffold_fn() if scaffold_fn is not None else None
   )
 
