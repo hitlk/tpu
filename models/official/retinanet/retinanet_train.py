@@ -144,6 +144,7 @@ def main(argv):
   )
   config_proto = tf.ConfigProto(
       allow_soft_placement=True, log_device_placement=False)
+  config_proto.gpu_options.allow_growth = True
   run_config = estimator.RunConfig(
     model_dir=FLAGS.model_dir,
     session_config=config_proto,
