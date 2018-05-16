@@ -414,7 +414,6 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
         bn_trainable=bn_trainable,
         name='block_group1',
         data_format=data_format)
-    c2 = tf.stop_gradient(c2)
     c3 = block_group(
         inputs=c2,
         filters=128,
