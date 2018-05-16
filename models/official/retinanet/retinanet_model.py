@@ -35,6 +35,7 @@ from tensorflow import estimator
 # from tensorflow.contrib.tpu.python.tpu import bfloat16
 from tensorflow.contrib.tpu.python.tpu import tpu_estimator
 from tensorflow.contrib.tpu.python.tpu import tpu_optimizer
+from tensorflow.contrib.framework import filter_variables
 
 # A collection of Learning Rate schecules:
 # third_party/tensorflow_models/object_detection/utils/learning_schedules.py
@@ -281,7 +282,7 @@ def _detection_loss(cls_outputs, box_outputs, labels, params):
 
 
 def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
-  """Model defination for the RetinaNet model based on ResNet.
+  """Model definition for the RetinaNet model based on ResNet.
 
   Args:
     features: the input image tensor with shape [batch_size, height, width, 3].
@@ -349,6 +350,15 @@ def _model_fn(features, labels, mode, params, model, variable_filter_fn=None):
       init_saver = tf.train.Saver(variables_to_restore)
       def init_fn(scaffold, sess):
         init_saver.restore(sess, params['resnet_checkpoint'])
+      return tf.train.Scaffold(init_fn=init_fn)
+  elif params['fine_tune_checkpoint'] and mode == tf.estimator.ModeKeys.TRAIN:
+    def scaffold_fn():
+      variable_to_restore = tf.global_variables()
+      variable_to_restore = filter_variables(variable_to_restore,
+                                             exclude_patterns=['class-predict', 'box-predict', 'Momentum'])
+      init_saver = tf.train.Saver(variable_to_restore)
+      def init_fn(scaffold, sess):
+        init_saver.restore(sess, params['fine_tune_checkpoint'])
       return tf.train.Scaffold(init_fn=init_fn)
   else:
     scaffold_fn = None

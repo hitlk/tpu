@@ -64,6 +64,8 @@ flags.DEFINE_string('model_dir', None, 'Location of model_dir')
 flags.DEFINE_string('resnet_checkpoint', '',
                     'Location of the ResNet50 checkpoint to use for model '
                     'initialization.')
+flags.DEFINE_string('fine_tune_checkpoint', '',
+                    'Location of pre-trained checkpoint.')
 flags.DEFINE_string('hparams', '',
                     'Comma separated k=v pairs of hyperparameters.')
 # flags.DEFINE_integer(
@@ -138,6 +140,7 @@ def main(argv):
       # num_shards=FLAGS.num_shards,
       # use_tpu=FLAGS.use_tpu,
       resnet_checkpoint=FLAGS.resnet_checkpoint,
+      fine_tune_checkpoint=FLAGS.fine_tune_checkpoint,
       val_json_file=FLAGS.val_json_file,
       mode=FLAGS.mode,
   )
