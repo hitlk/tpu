@@ -192,7 +192,8 @@ def main(argv):
                                                                       1,
                                                                       is_training=False),
                                       steps=FLAGS.eval_steps,
-                                      start_delay_secs=360000)
+                                      start_delay_secs=72000,
+                                      throttle_secs=72000)
     tf.estimator.train_and_evaluate(train_estimator, train_spec, eval_spec)
 
     if FLAGS.eval_after_training:
