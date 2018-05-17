@@ -251,7 +251,7 @@ def residual_block(inputs,
 def bottleneck_block(inputs,
                      filters,
                      is_training_bn,
-                     bn_trainable,
+                     use_bn,
                      strides,
                      use_projection=False,
                      data_format='channels_last'):
@@ -274,7 +274,7 @@ def bottleneck_block(inputs,
   Returns:
     The output `Tensor` of the block.
   """
-  norm_relu_fn = batch_norm_relu if bn_trainable else affine_transformation_relu
+  norm_relu_fn = batch_norm_relu if use_bn else affine_transformation_relu
   shortcut = inputs
   if use_projection:
     # Projection shortcut only in first block within a group. Bottleneck blocks
@@ -327,7 +327,7 @@ def block_group(inputs,
                 blocks,
                 strides,
                 is_training_bn,
-                bn_trainable,
+                use_bn,
                 name,
                 data_format='channels_last'):
   """Creates one group of blocks for the ResNet model.
@@ -352,14 +352,14 @@ def block_group(inputs,
       inputs,
       filters,
       is_training_bn,
-      bn_trainable,
+      use_bn,
       strides,
       use_projection=True,
       data_format=data_format)
 
   for _ in range(1, blocks):
     inputs = block_fn(
-        inputs, filters, is_training_bn, bn_trainable, 1, data_format=data_format)
+        inputs, filters, is_training_bn, use_bn, 1, data_format=data_format)
 
   return tf.identity(inputs, name)
 
@@ -384,9 +384,9 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
     Model `function` that takes in `inputs` and `is_training` and returns the
     output `Tensor` of the ResNet model.
   """
-  def model(inputs, is_training_bn=False, bn_trainable=False):
+  def model(inputs, is_training_bn=False, use_bn=False):
     """Creation of the model graph."""
-    norm_relu_fn = batch_norm_relu if bn_trainable else affine_transformation_relu
+    norm_relu_fn = batch_norm_relu if use_bn else affine_transformation_relu
     inputs = conv2d_fixed_padding(
         inputs=inputs,
         filters=64,
@@ -411,7 +411,7 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
         strides=1,
         block_fn=block_fn,
         is_training_bn=is_training_bn,
-        bn_trainable=bn_trainable,
+        use_bn=use_bn,
         name='block_group1',
         data_format=data_format)
     c3 = block_group(
@@ -421,7 +421,7 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
         strides=2,
         block_fn=block_fn,
         is_training_bn=is_training_bn,
-        bn_trainable=bn_trainable,
+        use_bn=use_bn,
         name='block_group2',
         data_format=data_format)
     c4 = block_group(
@@ -431,7 +431,7 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
         strides=2,
         block_fn=block_fn,
         is_training_bn=is_training_bn,
-        bn_trainable=bn_trainable,
+        use_bn=use_bn,
         name='block_group3',
         data_format=data_format)
     c5 = block_group(
@@ -441,7 +441,7 @@ def resnet_v1_generator(block_fn, layers, data_format='channels_last'):
         strides=2,
         block_fn=block_fn,
         is_training_bn=is_training_bn,
-        bn_trainable=bn_trainable,
+        use_bn=use_bn,
         name='block_group4',
         data_format=data_format)
     return c2, c3, c4, c5
@@ -493,7 +493,7 @@ def nearest_upsampling(data, scale):
 
 
 ## RetinaNet specific layers
-def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False, bn_trainable=False):
+def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False, use_bn=False):
   """Class prediction network for RetinaNet."""
   for i in range(4):
     images = tf.layers.conv2d(
@@ -509,7 +509,7 @@ def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False, b
     # The convolution layers in the class net are shared among all levels, but
     # each level has its batch normlization to capture the statistical
     # difference among different levels.
-    if bn_trainable:
+    if use_bn and is_training_bn:
       images = batch_norm_relu(images, is_training_bn, relu=True, init_zero=False,
                                name='class-%d-bn-%d' % (i, level))
     else:
@@ -528,7 +528,7 @@ def class_net(images, level, num_classes, num_anchors=6, is_training_bn=False, b
   return classes
 
 
-def box_net(images, level, num_anchors=6, is_training_bn=False, bn_trainable=False):
+def box_net(images, level, num_anchors=6, is_training_bn=False, use_bn=False):
   """Box regression network for RetinaNet."""
   for i in range(4):
     images = tf.layers.conv2d(
@@ -544,7 +544,7 @@ def box_net(images, level, num_anchors=6, is_training_bn=False, bn_trainable=Fal
     # The convolution layers in the box net are shared among all levels, but
     # each level has its batch normlization to capture the statistical
     # difference among different levels.
-    if bn_trainable:
+    if use_bn and is_training_bn:
       images = batch_norm_relu(images, is_training_bn, relu=True, init_zero=False,
                                name='box-%d-bn-%d' % (i, level))
     else:
@@ -568,12 +568,12 @@ def resnet_fpn(features,
                max_level=7,
                resnet_depth=50,
                is_training_bn=False,
-               bn_trainable=False):
+               use_bn=False):
   """ResNet feature pyramid networks."""
   # upward layers
   with tf.variable_scope('resnet%s' % resnet_depth):
     resnet_fn = resnet_v1(resnet_depth)
-    u2, u3, u4, u5 = resnet_fn(features, is_training_bn, bn_trainable)
+    u2, u3, u4, u5 = resnet_fn(features, is_training_bn, use_bn)
 
   feats_bottom_up = {
       2: u2,
@@ -623,7 +623,7 @@ def resnet_fpn(features,
           padding='same',
           name='p%d' % level)
     # add batchnorm
-    if bn_trainable:
+    if use_bn and is_training_bn:
       for level in range(min_level, max_level + 1):
         feats[level] = tf.layers.batch_normalization(
           inputs=feats[level],
@@ -645,11 +645,11 @@ def retinanet(features,
               num_anchors=6,
               resnet_depth=50,
               is_training_bn=False,
-              bn_trainable=False):
+              use_bn=False):
   """RetinaNet classification and regression model."""
   # create feature pyramid networks
   feats = resnet_fpn(features, min_level, max_level, resnet_depth,
-                     is_training_bn, bn_trainable)
+                     is_training_bn, use_bn)
   # add class net and box net in RetinaNet. The class net and the box net are
   # shared among all the levels.
   with tf.variable_scope('retinanet'):
@@ -658,11 +658,11 @@ def retinanet(features,
     with tf.variable_scope('class_net', reuse=tf.AUTO_REUSE):
       for level in range(min_level, max_level + 1):
         class_outputs[level] = class_net(feats[level], level, num_classes,
-                                         num_anchors, is_training_bn, bn_trainable)
+                                         num_anchors, is_training_bn, use_bn)
     with tf.variable_scope('box_net', reuse=tf.AUTO_REUSE):
       for level in range(min_level, max_level + 1):
         box_outputs[level] = box_net(feats[level], level,
-                                     num_anchors, is_training_bn, bn_trainable)
+                                     num_anchors, is_training_bn, use_bn)
 
   return class_outputs, box_outputs
 
