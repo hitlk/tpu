@@ -262,6 +262,7 @@ def bottleneck_block(inputs,
     filters: `int` number of filters for the first two convolutions. Note that
         the third and final convolution will use 4 times as many filters.
     is_training_bn: `bool` for whether the model is in training.
+    use_bn: whether replace bn with affine transformation.
     strides: `int` block stride. If greater than 1, this block will ultimately
         downsample the input.
     use_projection: `bool` for whether this block should use a projection
