@@ -117,6 +117,8 @@ def _cls_loss(prediction_tensor,
       on-hot encoded classification targets.
     weights: A float tensor of size [batch_size, num_anchors].
   """
+  tf.check_numerics(prediction_tensor, 'prediction tensor is nan or inf.')
+  tf.check_numerics(target_tensor, 'target tensor is nan or inf.')
   normalizer = num_positives
   weights = tf.expand_dims(weights, axis=2)
   per_entry_cross_ent = (tf.nn.sigmoid_cross_entropy_with_logits(
